@@ -1,0 +1,24 @@
+buildscript {
+    repositories {
+        google()
+        gradlePluginPortal()
+        maven { url 'https://developer.huawei.com/repo/' }
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.4'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+        maven { url 'https://developer.huawei.com/repo/' }
+        maven { url "https://maven.aliyun.com/repository/public" }
+    }
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}

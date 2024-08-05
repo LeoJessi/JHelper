@@ -1,2 +1,6 @@
-# JHelper
-Android工具类
+## JHelper - Android工具类
+本仓库用于收集一些常用的Android工具类 - 2024.08.05
+
+#### 2024.08.05
+
+1. 增加enigma包 -- 主要是一些加解密方式
