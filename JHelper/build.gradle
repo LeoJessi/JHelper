@@ -2,6 +2,7 @@ plugins {
     id 'com.android.library'
 }
 apply from: "$rootDir/gradle/publish.gradle"
+apply plugin: "kotlin-android"
 
 android {
     namespace 'top.jessi.jhelper'
