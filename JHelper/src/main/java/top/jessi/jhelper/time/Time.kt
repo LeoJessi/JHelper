@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Formatter
 import java.util.Locale
+import java.util.TimeZone
 
 /**
  * Created by Jessi on 2022/11/22 16:49
@@ -122,13 +123,13 @@ object Time {
     }
 
     /**
-     * 格式化时间
+     * 格式化时间 小时:分钟:秒
      *
      * @param millisecond 时间 --- 精确到毫秒
      * @return 格式化后的字符串
      */
     @JvmStatic
-    fun formatTime(millisecond: Int): String {
+    fun formatDuration(millisecond: Int): String {
         val mFormatter = Formatter(Locale.getDefault())
         val totalSeconds = millisecond / 1000
         val seconds = totalSeconds % 60
@@ -139,5 +140,19 @@ object Time {
         } else {
             mFormatter.format("%02d:%02d", minutes, seconds).toString()
         }
+    }
+
+    /**
+     * 获取时区 如 +8  -3
+     *
+     * @param timeZoneID 时区对象ID
+     * @return 对应时区
+     */
+    @JvmStatic
+    fun getNumberTimeZone(timeZoneID: String?): Int {
+        val timeZone = TimeZone.getTimeZone(timeZoneID)
+        // 获取与0时区的时间戳偏移量
+        val offset = timeZone.getOffset(System.currentTimeMillis())
+        return offset / (3600 * 1000)
     }
 }
