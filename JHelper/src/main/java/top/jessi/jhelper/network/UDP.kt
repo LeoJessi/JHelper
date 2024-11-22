@@ -38,7 +38,10 @@ class UDP {
         } catch (e: IOException) {
             e.printStackTrace()
         } finally {
-            if (socket != null && !socket.isClosed) socket.close()
+            socket?.apply {
+                disconnect()
+                if (!isClosed) close()
+            }
         }
     }
 
@@ -58,6 +61,9 @@ class UDP {
         try {
             // 创建并绑定到指定端口的 DatagramSocket
             socket = DatagramSocket(port)
+            // 端口复用 -- 当服务关掉立马重启时，很多时候会提示端口仍被占用（因端口上有处于TIME_WAIT的连接
+            // 设置true 可以使得服务在关闭后重启时能够立即使用该端口，而不是等待60秒的TIME_WAIT时间‌
+            socket.reuseAddress = true
             // 创建一个缓冲区来接收数据
             val buffer = ByteArray(4096)
             val packet = DatagramPacket(buffer, buffer.size)
@@ -73,7 +79,10 @@ class UDP {
             e.printStackTrace()
         } finally {
             // 当停止接收数据的时候一定要关闭socket
-            if (socket != null && !socket.isClosed) socket.close()
+            socket?.apply {
+                disconnect()
+                if (!isClosed) close()
+            }
         }
     }
 

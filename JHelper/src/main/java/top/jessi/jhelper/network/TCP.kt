@@ -32,7 +32,7 @@ class TCP {
             throw UnsupportedOperationException("This method does not support operation on the main thread!")
         }
         var socket: Socket? = null
-        var reader: BufferedReader? = null
+        val reader: BufferedReader?
         try {
             socket = Socket(ip, port)
             // 设置15秒之后即认为是超时
@@ -51,8 +51,7 @@ class TCP {
             e.printStackTrace()
         } finally {
             // 当停止接收数据的时候一定要关闭socket
-            if (socket != null && !socket.isClosed) socket.close()
-            reader?.close()
+            socket?.apply { if (!isClosed) close() }
         }
     }
 
@@ -66,6 +65,7 @@ class TCP {
         try {
             // 创建一个ServerSocket,用于监听客户端socket的连接请求
             serverSocket = ServerSocket(port)
+            serverSocket.reuseAddress = true
             /*采用循环不断接受来自客户端的请求,服务器端也对应产生一个Socket*/
             while (mIsRunning) {
                 socket = serverSocket.accept()
@@ -82,8 +82,8 @@ class TCP {
             e.printStackTrace()
         } finally {
             // 当停止接收数据的时候一定要关闭socket
-            if (serverSocket != null && !serverSocket.isClosed) serverSocket.close()
-            if (socket != null && !socket.isClosed) socket.close()
+            serverSocket?.apply { if (!isClosed) close() }
+            socket?.apply { if (!isClosed) close() }
         }
     }
 
