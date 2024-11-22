@@ -66,9 +66,9 @@ class UDP {
             socket.reuseAddress = true
             // 创建一个缓冲区来接收数据
             val buffer = ByteArray(4096)
-            val packet = DatagramPacket(buffer, buffer.size)
             socket.receiveBufferSize = buffer.size
             while (mIsRunning) {
+                val packet = DatagramPacket(buffer, buffer.size)
                 // 接收数据
                 socket.receive(packet)
                 // 获取接收到的数据
