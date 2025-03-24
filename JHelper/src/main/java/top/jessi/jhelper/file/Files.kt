@@ -1,10 +1,13 @@
 package top.jessi.jhelper.file
 
 import android.content.Context
+import android.content.Intent
 import android.database.Cursor
 import android.provider.MediaStore
 import android.text.TextUtils
+import android.util.Log
 import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.File
@@ -421,5 +424,40 @@ object Files {
         cursor.close()
         return fileList
     }
+
+    /**
+     * 借助第三方软件打开文件
+     * 需先在AndroidManifest.xml 注册 provider
+     *
+     * <provider
+     *     android:name="androidx.core.content.FileProvider"
+     *     android:authorities="${applicationId}.fileprovider"
+     *     android:exported="false"
+     *     android:grantUriPermissions="true">
+     *     <meta-data
+     *         android:name="android.support.FILE_PROVIDER_PATHS"
+     *         android:resource="@xml/file_provider_paths" />
+     * </provider>
+     */
+    @JvmStatic
+    fun openToExternal(context: Context, file: File): Boolean {
+        if (!file.exists()) return false
+        val intent = Intent()
+        intent.action = Intent.ACTION_VIEW
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        intent.setDataAndType(uri, getFileMimeType(file))
+        // 用于检查是否存在一个Activity能够响应特定的Intent。如果返回值为null，表示没有找到匹配的Activity
+        if (intent.resolveActivity(context.packageManager) == null) return false
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Log.w("Files", "open to external failure")
+            return false
+        }
+        return true
+    }
+
 
 }
