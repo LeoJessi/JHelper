@@ -7,7 +7,10 @@ import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Looper
 import androidx.annotation.RequiresPermission
-import top.jessi.jhelper.time.Time
+import java.io.IOException
+import java.net.ServerSocket
+import java.util.Locale
+
 
 /**
  * Created by Jessi on 2024/10/31 10:49
@@ -54,6 +57,48 @@ object Functions {
             }
         }
         return 0
+    }
+
+    /**
+     * 格式化文件大小
+     *
+     * @param size 字节大小
+     * @return 格式化大小
+     */
+    @JvmStatic
+    fun formatFileSize(size: Long): String {
+        if (size <= 0) return "0 B"
+        val fSize: Float
+        val unit: String
+        if (size < 1024) {
+            fSize = size.toFloat()
+            unit = " B"
+        } else if (size < 1024 * 1024) {
+            fSize = size / 1024F
+            unit = " K"
+        } else if (size < 1024 * 1024 * 1024) {
+            fSize = size / (1024 * 1024F)
+            unit = " M"
+        } else {
+            fSize = size / (1024 * 1024 * 1024F)
+            unit = " G"
+        }
+        // 之所以不用Locale.getDefault()是因为有一些语言貌似没有 . 符号?  结果显示成了逗号,
+        return String.format(Locale.ENGLISH, "%.1f", fSize) + unit
+    }
+
+    /**
+     * 检查端口是否可用
+     */
+    fun checkPortAvailable(port: Int): Boolean {
+        // 尝试绑定到指定端口
+        try {
+            // 成功绑定，说明端口可用
+            ServerSocket(port).use { return true }
+        } catch (e: IOException) {
+            // 绑定失败，端口可能被占用
+            return false
+        }
     }
 
 }
