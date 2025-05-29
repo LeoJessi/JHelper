@@ -192,20 +192,17 @@ object Files {
      */
     @JvmStatic
     fun delete(path: String): Boolean {
-        var isSuccess = false
+        if (!isExists(path)) return false
         val file = File(path)
-        if (file.exists()) {
-            if (!file.isFile) {
-                val files = file.listFiles()
-                if (files != null) {
-                    for (f in files) {
-                        delete(f.absolutePath)
-                    }
+        if (!file.isFile) {
+            val files = file.listFiles()
+            if (files != null) {
+                for (f in files) {
+                    delete(f.absolutePath)
                 }
             }
-            isSuccess = file.delete()
         }
-        return isSuccess
+        return file.delete()
     }
 
     /**
@@ -216,15 +213,17 @@ object Files {
      */
     @JvmStatic
     fun read(filePath: String): String {
+        if (!isExists(filePath)) return ""
         var inputStream: FileInputStream? = null
         var bufferedReader: BufferedReader? = null
         val stringBuilder = StringBuilder()
         try {
-            inputStream = FileInputStream(filePath)
-            bufferedReader = BufferedReader(InputStreamReader(inputStream))
-            var line: String
+            val file = File(filePath)
+            inputStream = FileInputStream(file)
+            bufferedReader = BufferedReader(InputStreamReader(inputStream), inputStream.available())
+            var line: String?
             while (bufferedReader.readLine().also { line = it } != null) {
-                stringBuilder.append(line)
+                stringBuilder.append(line).append("\n")
             }
         } catch (e: IOException) {
             e.printStackTrace()
