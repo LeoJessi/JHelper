@@ -1,7 +1,10 @@
 package top.jessi.jhelper.util
 
 import android.Manifest.permission
+import android.app.UiModeManager
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -90,6 +93,7 @@ object Functions {
     /**
      * 检查端口是否可用
      */
+    @JvmStatic
     fun checkPortAvailable(port: Int): Boolean {
         // 尝试绑定到指定端口
         try {
@@ -99,6 +103,26 @@ object Functions {
             // 绑定失败，端口可能被占用
             return false
         }
+    }
+
+    @JvmStatic
+    fun isTv(context: Context): Boolean {
+        // 1. 检查系统特性
+        val pm = context.packageManager
+        val isFeatureTv = pm.hasSystemFeature(PackageManager.FEATURE_TELEVISION)
+        val isFeatureLeanback = pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+
+        // 2. 检查 UI 模式
+        val uiModeManager= context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        val isTvMode = uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
+
+        // 3. 检查输入设备
+        val hasTouchScreen = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        // 是否支持导航 如DPAD_UP
+        val hasDpad = context.resources.configuration.navigation == Configuration.NAVIGATION_DPAD
+
+        // 判断逻辑
+        return (isFeatureTv || isFeatureLeanback || isTvMode) && (!hasTouchScreen && hasDpad)
     }
 
 }
