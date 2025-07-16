@@ -3,6 +3,7 @@ package top.jessi.jhelper.util
 import android.Manifest.permission
 import android.app.UiModeManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.net.ConnectivityManager
@@ -22,6 +23,9 @@ import java.util.Locale
  */
 object Functions {
 
+    /**
+     * 判断当前线程是否在主线程
+     */
     @JvmStatic
     fun inMainThread() = Looper.getMainLooper().thread == Thread.currentThread()
 
@@ -105,6 +109,9 @@ object Functions {
         }
     }
 
+    /**
+     * 判断当前设备是否是TV设备
+     */
     @JvmStatic
     fun isTv(context: Context): Boolean {
         // 1. 检查系统特性
@@ -113,7 +120,7 @@ object Functions {
         val isFeatureLeanback = pm.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
 
         // 2. 检查 UI 模式
-        val uiModeManager= context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
+        val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         val isTvMode = uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
 
         // 3. 检查输入设备
@@ -123,6 +130,51 @@ object Functions {
 
         // 判断逻辑
         return (isFeatureTv || isFeatureLeanback || isTvMode) && (!hasTouchScreen && hasDpad)
+    }
+
+    /**
+     * 根据包名打开apk
+     */
+    @JvmStatic
+    fun openApp(context: Context, pkg: String) {
+        try {
+            val pm = context.packageManager
+            var intent = pm.getLaunchIntentForPackage(pkg)
+            if (intent == null) {
+                /*
+                 * 获取AndroidTV上Leanback的启动方式
+                 * 有的ATV软件只注册了 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                 * 所以上面 <category android:name="android.intent.category.LAUNCHER" /> 搜索不到
+                 * */
+                intent = pm.getLeanbackLaunchIntentForPackage(pkg)
+            }
+            intent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    /**
+     * 打开具体包的具体类
+     * <p>
+     * 当从外部想要打开具体活动时，需要添加以下，包括同一个程序中使用工具类调用也一样
+     * intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+     *
+     * @param context 上下文
+     * @param pkg     包名
+     * @param clazz   类名
+     */
+    @JvmStatic
+    fun openClass(context: Context, pkg: String, clazz: String) {
+        try {
+            val intent = Intent()
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+            intent.setClassName(pkg, clazz)
+            context.startActivity(intent)
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
     }
 
 }
