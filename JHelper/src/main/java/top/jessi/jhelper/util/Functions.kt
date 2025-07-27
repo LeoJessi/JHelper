@@ -15,6 +15,7 @@ import androidx.annotation.RequiresPermission
 import java.io.IOException
 import java.net.ServerSocket
 import java.util.Locale
+import java.util.regex.Pattern
 
 
 /**
@@ -179,5 +180,19 @@ object Functions {
         e.printStackTrace()
         false
     }
+
+    /**
+     * 判断字符串是否是数字
+     * @param str   要判断的字符串
+     */
+    @JvmStatic
+    fun isNumber(str: String): Boolean {
+        val regexInt = "^-?[1-9]\\d*$"
+        val regexDouble = "^-?([1-9]\\d*\\.\\d*|0\\.\\d*[1-9]\\d*|0?\\.0+|0)$"
+        val isInt = Pattern.compile(regexInt).matcher(str).find()
+        val isDouble = Pattern.compile(regexDouble).matcher(str).find()
+        return isInt || isDouble
+    }
+
 
 }
