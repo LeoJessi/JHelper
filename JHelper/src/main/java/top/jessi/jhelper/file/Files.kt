@@ -302,9 +302,14 @@ object Files {
      */
     @JvmStatic
     fun getM3UTotal(context: Context): Int {
-        val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Files.getContentUri("external"), null, "mime_type=?", arrayOf("audio/x-mpegurl"), null
-        ) ?: return 0
+        val uri = MediaStore.Files.getContentUri("external")
+        val projection = arrayOf(MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val selection = ("(${MediaStore.Files.FileColumns.MIME_TYPE} IN (?, ?, ?)"
+                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?"
+                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?)")
+        val selectionArgs = arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
+        val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
+        val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder) ?: return 0
         val total = cursor.count
         cursor.close()
         return total
@@ -405,10 +410,15 @@ object Files {
      */
     @JvmStatic
     fun getM3UList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
+        val uri = MediaStore.Files.getContentUri("external")
+        val projection = arrayOf(MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DISPLAY_NAME)
+        val selection = ("(${MediaStore.Files.FileColumns.MIME_TYPE} IN (?, ?, ?)"
+                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?"
+                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?)")
+        val selectionArgs = arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
         val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
-        val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Files.getContentUri("external"), null, "mime_type=?", arrayOf("audio/x-mpegurl"), sortOrder
-        ) ?: return ArrayList()
+        val cursor =
+            context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder) ?: return ArrayList()
         val fileList: MutableList<File> = ArrayList()
         var curIndex = -1
         val offset = pageSize * curPage
