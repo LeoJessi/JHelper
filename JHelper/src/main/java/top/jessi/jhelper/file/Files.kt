@@ -213,14 +213,14 @@ object Files {
      */
     @JvmStatic
     fun read(filePath: String): String {
-        if (!isExists(filePath)) return ""
+        if (!isExists(filePath) || File(filePath).length() <= 0) return ""
         var inputStream: FileInputStream? = null
         var bufferedReader: BufferedReader? = null
         val stringBuilder = StringBuilder()
         try {
             val file = File(filePath)
             inputStream = FileInputStream(file)
-            bufferedReader = BufferedReader(InputStreamReader(inputStream), inputStream.available())
+            bufferedReader = BufferedReader(InputStreamReader(inputStream))
             var line: String?
             while (bufferedReader.readLine().also { line = it } != null) {
                 stringBuilder.append(line).append("\n")
