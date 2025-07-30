@@ -125,13 +125,14 @@ object Functions {
         val uiModeManager = context.getSystemService(Context.UI_MODE_SERVICE) as UiModeManager
         val isTvMode = uiModeManager.currentModeType == Configuration.UI_MODE_TYPE_TELEVISION
 
-        // 3. 检查输入设备
-        val hasTouchScreen = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
-        // 是否支持导航 如DPAD_UP
-        val hasDpad = context.resources.configuration.navigation == Configuration.NAVIGATION_DPAD
-
+        // // 3. 检查输入设备
+        // val hasTouchScreen = pm.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN)
+        // // 是否支持导航 如DPAD_UP
+        // val hasDpad = context.resources.configuration.navigation == Configuration.NAVIGATION_DPAD
         // 判断逻辑
-        return (isFeatureTv || isFeatureLeanback || isTvMode) && (!hasTouchScreen && hasDpad)
+        // return (isFeatureTv || isFeatureLeanback || isTvMode) && (!hasTouchScreen && hasDpad)
+
+        return (isFeatureTv || isFeatureLeanback || isTvMode)
     }
 
     /**
