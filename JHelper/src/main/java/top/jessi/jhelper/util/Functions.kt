@@ -195,5 +195,28 @@ object Functions {
         return isInt || isDouble
     }
 
-
+    /**
+     * 字符串补零
+     *
+     * @param str     原有字符串
+     * @param len  需要补齐长度
+     * @param isFront 是否补在前面
+     * @return 已补零字符串
+     */
+    @JvmStatic
+    fun addZeros(str: String, len: Int, isFront: Boolean): String {
+        val sb = StringBuilder()
+        if (isFront) {
+            for (i in 1..len - str.length) {
+                sb.append("0")
+            }
+            sb.append(str)
+        } else {
+            sb.append(str)
+            for (i in 1..len - str.length) {
+                sb.append("0")
+            }
+        }
+        return sb.toString()
+    }
 }
