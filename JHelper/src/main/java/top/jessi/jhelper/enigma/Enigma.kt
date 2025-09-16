@@ -440,8 +440,7 @@ object Enigma {
      */
     @JvmStatic
     fun hexToByte(hex: String): ByteArray {
-        // 如果字符串长度是奇数，就无法正确转换成字节数组,因为 1 个字节需要 2 个十六进制字符表示
-        if (TextUtils.isEmpty(hex) || hex.length < 2 || hex.length % 2 == 0) return ByteArray(0)
+        if (TextUtils.isEmpty(hex) || hex.length < 2) return ByteArray(0)
         val tempHexStr = hex.lowercase()
         val len = tempHexStr.length / 2
         val result = ByteArray(len)
