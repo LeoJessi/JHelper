@@ -14,7 +14,7 @@
   ~ limitations under the License.
   -->
 
-<manifest package="top.jessi.ilogsample"
+<manifest package="top.jessi.jhelper_sample"
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -26,7 +26,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity
-            android:name="top.jessi.ilogsample.MainActivity"
+            android:name="top.jessi.jhelper_sample.MainActivity"
             android:screenOrientation="portrait"
             android:exported="true"
             android:theme="@style/AppTheme.NoActionBar">

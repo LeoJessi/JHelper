@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 apply plugin: "kotlin-android"
 
 android {
-    namespace = "top.jessi.ilogsample"
+    namespace = "top.jessi.jhelper_sample"
 
     compileSdk 34
 
@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId "top.jessi.ilogsample"
+        applicationId "top.jessi.jhelper_sample"
         minSdk 21
         targetSdk 34
         versionCode 1
