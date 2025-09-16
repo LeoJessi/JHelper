@@ -32,8 +32,42 @@ object Enigma {
         val md = MessageDigest.getInstance("MD5")
         val digest = md.digest(plaintext.toByteArray())
         // 转 16 进制并补零,再直接拼接字符串
-        return digest.joinToString("") { "%02X".format(it) }
+        return digest.joinToString("") { "%02x".format(it) }
     }
+
+    /********************************** SHA **********************************/
+    @JvmStatic
+    fun sha1(plaintext: String): String {
+        val md = MessageDigest.getInstance("SHA-1")
+        val digest = md.digest(plaintext.toByteArray())
+        // 转 16 进制并补零,再直接拼接字符串
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    @JvmStatic
+    fun sha256(plaintext: String): String {
+        val md = MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(plaintext.toByteArray())
+        // 转 16 进制并补零,再直接拼接字符串
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    @JvmStatic
+    fun sha384(plaintext: String): String {
+        val md = MessageDigest.getInstance("SHA-384")
+        val digest = md.digest(plaintext.toByteArray())
+        // 转 16 进制并补零,再直接拼接字符串
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+
+    @JvmStatic
+    fun sha512(plaintext: String): String {
+        val md = MessageDigest.getInstance("SHA-512")
+        val digest = md.digest(plaintext.toByteArray())
+        // 转 16 进制并补零,再直接拼接字符串
+        return digest.joinToString("") { "%02x".format(it) }
+    }
+    /********************************** SHA **********************************/
 
     /********************************** CAESAR **********************************/
     @JvmStatic
@@ -177,40 +211,6 @@ object Enigma {
         return plaintext.toString()
     }
     /********************************** FENCE **********************************/
-
-    /********************************** SHA **********************************/
-    @JvmStatic
-    fun sha1(plaintext: String): String {
-        val md = MessageDigest.getInstance("SHA-1")
-        val digest = md.digest(plaintext.toByteArray())
-        // 转 16 进制并补零,再直接拼接字符串
-        return digest.joinToString("") { "%02X".format(it) }
-    }
-
-    @JvmStatic
-    fun sha256(plaintext: String): String {
-        val md = MessageDigest.getInstance("SHA-256")
-        val digest = md.digest(plaintext.toByteArray())
-        // 转 16 进制并补零,再直接拼接字符串
-        return digest.joinToString("") { "%02X".format(it) }
-    }
-
-    @JvmStatic
-    fun sha384(plaintext: String): String {
-        val md = MessageDigest.getInstance("SHA-384")
-        val digest = md.digest(plaintext.toByteArray())
-        // 转 16 进制并补零,再直接拼接字符串
-        return digest.joinToString("") { "%02X".format(it) }
-    }
-
-    @JvmStatic
-    fun sha512(plaintext: String): String {
-        val md = MessageDigest.getInstance("SHA-512")
-        val digest = md.digest(plaintext.toByteArray())
-        // 转 16 进制并补零,再直接拼接字符串
-        return digest.joinToString("") { "%02X".format(it) }
-    }
-    /********************************** SHA **********************************/
 
     /********************************** AES **********************************/
     /**
