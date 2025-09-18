@@ -3,6 +3,8 @@ package top.jessi.jhelper.enigma
 import android.text.TextUtils
 import android.util.Base64
 import java.math.BigInteger
+import java.net.URLDecoder
+import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.security.KeyFactory
 import java.security.KeyPair
@@ -536,5 +538,11 @@ object Enigma {
         }
         return decrypted
     }
+
+    @JvmStatic
+    fun encodeURL(decodedUrl: String): String = URLEncoder.encode(decodedUrl, "UTF-8")
+
+    @JvmStatic
+    fun decodeURL(encodedUrl: String): String = URLDecoder.decode(encodedUrl, "UTF-8")
 
 }
