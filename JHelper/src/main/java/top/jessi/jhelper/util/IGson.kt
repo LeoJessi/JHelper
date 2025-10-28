@@ -30,16 +30,22 @@ object IGson {
     @JvmStatic
     fun <T> fromJson(reader: Reader, type: Type): T = gson.fromJson(reader, type)
 
-    /** ✅ Kotlin专用: 支持复杂泛型推断 */
-    inline fun <reified T> fromJson(json: String): T {
-        val type = object : TypeToken<T>() {}.type
-        return gson.fromJson(json, type)
-    }
-
     /** JSON → List<T> */
     @JvmStatic
     fun <T> fromJsonToList(json: String, clazz: Class<T>): List<T> {
         val type = TypeToken.getParameterized(List::class.java, clazz).type
+        return gson.fromJson(json, type)
+    }
+
+    @JvmStatic
+    fun <K, V> fromJsonToMap(json: String): Map<K, V> {
+        val type = object : TypeToken<LinkedHashMap<K, V>>() {}.type
+        return gson.fromJson(json, type)
+    }
+
+    /** ✅ Kotlin专用: 支持复杂泛型推断 */
+    inline fun <reified T> fromJson(json: String): T {
+        val type = object : TypeToken<T>() {}.type
         return gson.fromJson(json, type)
     }
 
