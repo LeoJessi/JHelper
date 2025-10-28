@@ -8,7 +8,7 @@ import java.lang.reflect.Type
 
 object IGson {
 
-    private val gson: Gson by lazy { Gson() }
+    val gson: Gson by lazy { Gson() }
 
     /** JSON → 对象（指定 Class） */
     @JvmStatic
@@ -29,6 +29,12 @@ object IGson {
     /** JSON → 对象（Reader + Type） */
     @JvmStatic
     fun <T> fromJson(reader: Reader, type: Type): T = gson.fromJson(reader, type)
+
+    /** ✅ Kotlin专用: 支持复杂泛型推断 */
+    inline fun <reified T> fromJson(json: String): T {
+        val type = object : TypeToken<T>() {}.type
+        return gson.fromJson(json, type)
+    }
 
     /** JSON → List<T> */
     @JvmStatic
