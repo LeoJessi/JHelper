@@ -73,6 +73,7 @@ object Local {
             name.contains("norwegian") -> context.getString(R.string.norwegian)
             name.contains("fil") -> context.getString(R.string.fil)
             name.contains("latin america") -> context.getString(R.string.latin_america)
+            // Mandarin (Guoyu) AAC - [English] 因为有这种情况，所以英语最后匹配
             name.contains("english") || name.contains("british") -> context.getString(R.string.english)
             else -> rawName
         }
@@ -106,7 +107,7 @@ object Local {
             name.contains("india") -> "$tempName (${context.getString(R.string.india)})"
             name.contains("thailand") -> "$tempName (${context.getString(R.string.thailand)})"
             name.contains("malaysia") -> "$tempName (${context.getString(R.string.malaysia)})"
-            name.contains("indonesian") -> "$tempName (${context.getString(R.string.indonesian)})"
+            name.contains("indonesia") -> "$tempName (${context.getString(R.string.indonesia)})"
             else -> tempName
         }
         val newName = if (name.contains("sdh")) {

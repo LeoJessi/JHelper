@@ -11,8 +11,8 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Looper
+import android.text.TextUtils
 import androidx.annotation.RequiresPermission
-import top.jessi.jhelper.time.Time
 import java.io.IOException
 import java.net.ServerSocket
 import java.util.Locale
@@ -219,5 +219,12 @@ object Functions {
             }
         }
         return sb.toString()
+    }
+
+    /**
+     * 校验url
+     */
+    fun checkUrl(url: String): Boolean {
+        return !TextUtils.isEmpty(url) && !url.contains(" ") && url.matches("^https?://.*$".toRegex())
     }
 }
