@@ -224,7 +224,31 @@ object Functions {
     /**
      * 校验url
      */
+    @JvmStatic
     fun checkUrl(url: String): Boolean {
         return !TextUtils.isEmpty(url) && !url.contains(" ") && url.matches("^https?://.*$".toRegex())
     }
+
+    /**
+     * 提取字符串中的协议部分 （协议 主机名 端口）
+     */
+    @JvmStatic
+    fun extractHost(url: String): String {
+        val urlPattern = "^(https?://[^/?#]+)"
+        val pattern = Pattern.compile(urlPattern)
+        val matcher = pattern.matcher(url)
+        return if (matcher.find()) matcher.group() else ""
+    }
+
+    /**
+     * 提取字符串中的数字
+     */
+    @JvmStatic
+    fun extractNumber(str: String): String {
+        val urlPattern = "-?\\d+(\\.\\d+)?"
+        val pattern = Pattern.compile(urlPattern)
+        val matcher = pattern.matcher(str)
+        return if (matcher.find()) matcher.group() else ""
+    }
+
 }
