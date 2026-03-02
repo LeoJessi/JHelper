@@ -11,6 +11,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.os.Looper
+import android.provider.Settings
 import android.text.TextUtils
 import androidx.annotation.RequiresPermission
 import java.io.IOException
@@ -175,6 +176,34 @@ object Functions {
         val intent = Intent()
         val componentName = ComponentName(pkg, clazz)
         intent.component = componentName
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        context.startActivity(intent)
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+
+    /**
+     * 打开系统wifi设置
+     */
+    @JvmStatic
+    fun openWifiSettings(context: Context) = try {
+        val intent = Intent(Settings.ACTION_WIFI_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        context.startActivity(intent)
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+
+    /**
+     * 打开系统设置
+     */
+    @JvmStatic
+    fun openSystemSettings(context: Context) = try {
+        val intent = Intent(Settings.ACTION_SETTINGS)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         context.startActivity(intent)
         true

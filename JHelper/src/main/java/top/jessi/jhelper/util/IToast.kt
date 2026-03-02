@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import java.lang.ref.WeakReference
+import java.security.AccessController.getContext
 
 /**
  * Created by Jessi on 2026/2/28 10:21
@@ -30,6 +31,10 @@ object IToast {
     private var mGravity: Int = -1
     private var mXOffset: Int = 0
     private var mYOffset: Int = 80
+
+    private fun getContext(): Context {
+        return context?.get() ?: throw IllegalStateException("Please call init() in Application")
+    }
 
     // 初始化时传入 ApplicationContext（避免持有 Activity Context 引发内存泄漏）
     @JvmStatic
@@ -49,10 +54,6 @@ object IToast {
         this.mXOffset = xOffset
         this.mYOffset = yOffset
         return this
-    }
-
-    private fun getContext(): Context {
-        return context?.get() ?: throw IllegalStateException("Please call init() in Application")
     }
 
     @JvmStatic
