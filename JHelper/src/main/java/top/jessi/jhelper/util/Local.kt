@@ -14,6 +14,8 @@ object Local {
     fun normalizeLanguageName(context: Context, rawName: String): String {
         val name = rawName.lowercase()
         val tempName = when {
+            name.contains("mandarin") -> context.getString(R.string.mandarin)
+            name.contains("cantonese") -> context.getString(R.string.mandarin)
             name.contains("chinese") -> when {
                 name.contains("simplified") -> context.getString(R.string.simplified_chinese)
                 name.contains("traditional") -> context.getString(R.string.traditional_chinese)
@@ -65,7 +67,6 @@ object Local {
             name.contains("malay") -> context.getString(R.string.malay)
             name.contains("japanese") -> context.getString(R.string.japanese)
             name.contains("korean") -> context.getString(R.string.korean)
-            name.contains("mandarin") -> context.getString(R.string.mandarin)
             name.contains("indonesian") -> context.getString(R.string.indonesian)
             name.contains("spanish") -> context.getString(R.string.spanish)
             name.contains("disable") -> context.getString(R.string.disable)
