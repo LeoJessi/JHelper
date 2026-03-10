@@ -15,7 +15,7 @@ object Local {
         val name = rawName.lowercase()
         val tempName = when {
             name.contains("mandarin") -> context.getString(R.string.mandarin)
-            name.contains("cantonese") -> context.getString(R.string.mandarin)
+            name.contains("cantonese") -> context.getString(R.string.cantonese)
             name.contains("chinese") -> when {
                 name.contains("simplified") -> context.getString(R.string.simplified_chinese)
                 name.contains("traditional") -> context.getString(R.string.traditional_chinese)
