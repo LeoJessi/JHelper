@@ -54,6 +54,16 @@ import java.util.TimeZone
  * #################################时间格式化 END########################################
  */
 object Time {
+
+
+    /** 当前时间戳（毫秒） */
+    @JvmStatic
+    fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+    /** 当前时间戳（秒） */
+    @JvmStatic
+    fun currentTimeSeconds(): Long = System.currentTimeMillis() / 1000
+
     /**
      * 获取当前系统是否是24小时制
      *
@@ -143,16 +153,52 @@ object Time {
     }
 
     /**
-     * 获取时区 如 +8  -3
+     * 获取指定时区的 GMT 偏移字符串（用于展示）。
      *
-     * @param timeZoneID 时区对象ID
-     * @return 对应时区
+     * 示例：
+     * - "+08:00"（中国标准时间）
+     * - "-05:00"（美国东部时间）
+     * - "+05:30"（印度标准时间）
+     *
+     * 说明：
+     * - 该方法用于 UI 展示或日志输出
+     * - 不建议用于数值计算
+     *
+     * @param timeZone 目标时区，默认使用系统时区（TimeZone.getDefault()）
+     * @return GMT 偏移字符串，格式为 ±HH:mm
+     *
+     * @see getGmtOffsetHours
      */
     @JvmStatic
-    fun getNumberTimeZone(timeZoneID: String?): Int {
-        val timeZone = TimeZone.getTimeZone(timeZoneID)
-        // 获取与0时区的时间戳偏移量
+    @JvmOverloads
+    fun getGmtOffsetString(timeZone: TimeZone = TimeZone.getDefault()): String {
+        val offsetMinutes = timeZone.getOffset(System.currentTimeMillis()) / 60000
+        val hours = offsetMinutes / 60
+        val minutes = kotlin.math.abs(offsetMinutes % 60)
+        return "%+d:%02d".format(hours, minutes)
+    }
+
+    /**
+     * 获取指定时区的 GMT 偏移（以小时为单位，支持小数）。
+     *
+     * 示例：
+     * - 8.0   （GMT+08:00）
+     * - -5.0  （GMT-05:00）
+     * - 5.5   （GMT+05:30）
+     *
+     * 说明：
+     * - 该方法用于计算或业务逻辑处理
+     * - 不建议直接用于 UI 展示（格式不规范）
+     *
+     * @param timeZone 目标时区，默认使用系统时区（TimeZone.getDefault()）
+     * @return GMT 偏移值（单位：小时，可能包含小数）
+     *
+     * @see getGmtOffsetString
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun getGmtOffsetHours(timeZone: TimeZone = TimeZone.getDefault()): Double {
         val offset = timeZone.getOffset(System.currentTimeMillis())
-        return offset / (3600 * 1000)
+        return offset / (60.0 * 60 * 1000)
     }
 }
