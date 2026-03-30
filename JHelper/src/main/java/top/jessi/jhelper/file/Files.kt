@@ -8,10 +8,6 @@ import android.text.TextUtils
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
-import top.jessi.jhelper.time.Time
-import top.jessi.jhelper.time.Time.hours
-import top.jessi.jhelper.time.Time.minutes
-import top.jessi.jhelper.time.Time.seconds
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.File
@@ -22,7 +18,6 @@ import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.channels.FileChannel
 import java.util.Locale
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Created by Jessi on 2023/4/1 15:08

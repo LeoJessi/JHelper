@@ -77,19 +77,19 @@ object Time {
      * @return 对应的毫秒值
      */
     @JvmStatic
-    val Int.hours get() = this * 3_600_000L
+    val Int.hour get() = this * 3_600_000L
 
     /**
      * 将分钟数转换为毫秒（milliseconds）。
      */
     @JvmStatic
-    val Int.minutes get() = this * 60_000L
+    val Int.minute get() = this * 60_000L
 
     /**
      * 将秒数转换为毫秒（milliseconds）。
      */
     @JvmStatic
-    val Int.seconds get() = this * 1_000L
+    val Int.second get() = this * 1_000L
 
     /**
      * 获取当前系统是否是24小时制
