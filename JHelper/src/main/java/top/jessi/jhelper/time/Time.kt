@@ -65,6 +65,33 @@ object Time {
     fun currentTimeSeconds(): Long = System.currentTimeMillis() / 1000
 
     /**
+     * 拓展函数 将小时数转换为毫秒（milliseconds）。
+     *
+     * 示例：
+     * - 1 → 3600000L
+     * - 2 → 7200000L
+     *
+     * 适用场景：
+     * - 时间间隔计算（如回播时长、缓存时间等）
+     * - 3.hours / Time.getHours(3)
+     * @return 对应的毫秒值
+     */
+    @JvmStatic
+    val Int.hours get() = this * 3_600_000L
+
+    /**
+     * 将分钟数转换为毫秒（milliseconds）。
+     */
+    @JvmStatic
+    val Int.minutes get() = this * 60_000L
+
+    /**
+     * 将秒数转换为毫秒（milliseconds）。
+     */
+    @JvmStatic
+    val Int.seconds get() = this * 1_000L
+
+    /**
      * 获取当前系统是否是24小时制
      *
      * @param context 上下文

@@ -8,6 +8,10 @@ import android.text.TextUtils
 import android.util.Log
 import android.webkit.MimeTypeMap
 import androidx.core.content.FileProvider
+import top.jessi.jhelper.time.Time
+import top.jessi.jhelper.time.Time.hours
+import top.jessi.jhelper.time.Time.minutes
+import top.jessi.jhelper.time.Time.seconds
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.File
@@ -18,6 +22,7 @@ import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.channels.FileChannel
 import java.util.Locale
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Created by Jessi on 2023/4/1 15:08
@@ -264,7 +269,7 @@ object Files {
     @JvmStatic
     fun getImageTotal(context: Context): Int {
         val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null
         ) ?: return 0
         val total = cursor.count
         cursor.close()
@@ -277,7 +282,7 @@ object Files {
     @JvmStatic
     fun getVideoTotal(context: Context): Int {
         val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, null, null
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, null, null
         ) ?: return 0
         val total = cursor.count
         cursor.close()
@@ -290,7 +295,7 @@ object Files {
     @JvmStatic
     fun getAudioTotal(context: Context): Int {
         val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, null
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, null
         ) ?: return 0
         val total = cursor.count
         cursor.close()
@@ -309,7 +314,8 @@ object Files {
                 + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?)")
         val selectionArgs = arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
         val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
-        val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder) ?: return 0
+        val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
+                ?: return 0
         val total = cursor.count
         cursor.close()
         return total
@@ -326,7 +332,7 @@ object Files {
         // 默认按照最后修改时间倒序排序
         val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
         val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
+                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
         ) ?: return ArrayList()
         val fileList: MutableList<File> = ArrayList()
         // 查询下标
@@ -358,7 +364,7 @@ object Files {
     fun getVideoList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
         val sortOrder = "${MediaStore.Video.Media.DATE_MODIFIED} DESC"
         val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
+                MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
         ) ?: return ArrayList()
         val fileList: MutableList<File> = ArrayList()
         var curIndex = -1
@@ -385,7 +391,7 @@ object Files {
     fun getAudioList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
         val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
         val cursor: Cursor = context.contentResolver.query(
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
         ) ?: return ArrayList()
         val fileList: MutableList<File> = ArrayList()
         var curIndex = -1
@@ -418,7 +424,8 @@ object Files {
         val selectionArgs = arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
         val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
         val cursor =
-            context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder) ?: return ArrayList()
+                context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
+                        ?: return ArrayList()
         val fileList: MutableList<File> = ArrayList()
         var curIndex = -1
         val offset = pageSize * curPage
