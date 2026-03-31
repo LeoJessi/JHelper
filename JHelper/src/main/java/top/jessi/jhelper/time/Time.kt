@@ -9,9 +9,9 @@ import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Date
-import java.util.Formatter
 import java.util.Locale
 import java.util.TimeZone
+import kotlin.math.roundToLong
 
 /**
  * Created by Jessi on 2022/11/22 16:49
@@ -65,7 +65,7 @@ object Time {
     fun currentTimeSeconds(): Long = System.currentTimeMillis() / 1000
 
     /**
-     * 拓展函数 将小时数转换为毫秒（milliseconds）。
+     * 扩展函数 将小时数转换为毫秒（milliseconds）。
      *
      * 示例：
      * - 1 → 3600000L
@@ -79,17 +79,34 @@ object Time {
     @JvmStatic
     val Int.hour get() = this * 3_600_000L
 
+    @JvmStatic
+    val Double.hour get() = (this * 3_600_000L).roundToLong()
+
     /**
      * 将分钟数转换为毫秒（milliseconds）。
      */
     @JvmStatic
     val Int.minute get() = this * 60_000L
 
+    @JvmStatic
+    val Double.minute get() = (this * 60_000L).roundToLong()
+
     /**
      * 将秒数转换为毫秒（milliseconds）。
      */
     @JvmStatic
     val Int.second get() = this * 1_000L
+
+    @JvmStatic
+    val Double.second get() = (this * 1_000L).roundToLong()
+
+    /**
+     * 计算时间差
+     */
+    @JvmStatic
+    fun Long.diffNow(): Long {
+        return System.currentTimeMillis() - this
+    }
 
     /**
      * 获取当前系统是否是24小时制
@@ -142,7 +159,7 @@ object Time {
     /**
      * 日期格式字符串转换成时间戳
      *
-     * @param date   字符串日期
+     * @param date   字符串日期 -- 20240923190000 +0800
      * @param format 如：20240923190000 +0800  ---  yyyyMMddHHmmss Z  ---  2024年09月23日19时00分00秒 在+8时区的时间
      * @return 时间戳 --- 精确到毫秒
      */
@@ -160,23 +177,29 @@ object Time {
     }
 
     /**
-     * 格式化时间 小时:分钟:秒
+     * 将毫秒转换为播放时长字符串（mm:ss / HH:mm:ss）
      *
-     * @param millisecond 时间 --- 精确到毫秒
-     * @return 格式化后的字符串
+     * 示例：
+     * - 65000L   → "01:05"
+     * - 3605000L → "01:00:05"
+     *
+     * 适用场景：
+     * - 播放器进度显示
+     * - 音视频时长格式化
      */
     @JvmStatic
-    fun formatDuration(millisecond: Int): String {
-        val mFormatter = Formatter(Locale.getDefault())
-        val totalSeconds = millisecond / 1000
+    fun Long.formatDuration(): String {
+        val absMillis = kotlin.math.abs(this)
+        val totalSeconds = absMillis / 1000
         val seconds = totalSeconds % 60
-        val minutes = totalSeconds / 60 % 60
+        val minutes = (totalSeconds / 60) % 60
         val hours = totalSeconds / 3600
-        return if (hours > 0) {
-            mFormatter.format("%02d:%02d:%02d", hours, minutes, seconds).toString()
+        val result = if (hours > 0) {
+            "%02d:%02d:%02d".format(hours, minutes, seconds)
         } else {
-            mFormatter.format("%02d:%02d", minutes, seconds).toString()
+            "%02d:%02d".format(minutes, seconds)
         }
+        return if (this < 0) "-$result" else result
     }
 
     /**
