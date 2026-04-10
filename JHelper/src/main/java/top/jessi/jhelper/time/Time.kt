@@ -156,11 +156,6 @@ object Time {
         return sdf.format(Date(millisecond))
     }
 
-    @JvmStatic
-    fun formatTimestamp(millisecond: Long, format: String = "yyyy-MM-dd HH:mm:ss", timeZone: TimeZone = TimeZone.getDefault()): String {
-        return formatTimestamp(millisecond, format, timeZone.id)
-    }
-
     /**
      * 日期格式字符串转换成时间戳
      *
