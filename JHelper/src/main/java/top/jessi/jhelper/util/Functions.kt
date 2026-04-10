@@ -5,8 +5,11 @@ import android.app.UiModeManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.content.res.Configuration
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.Build
@@ -278,6 +281,65 @@ object Functions {
         val pattern = Pattern.compile(urlPattern)
         val matcher = pattern.matcher(str)
         return if (matcher.find()) matcher.group() else ""
+    }
+
+    /**
+     * 获取设备所有具有Activity可以启动的app
+     */
+    @JvmStatic
+    fun getAllLaunchableApps(context: Context): List<ResolveInfo> {
+        val pm = context.packageManager
+        val result = mutableListOf<ResolveInfo>()
+        val leanbackIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER)
+        }
+        result.addAll(pm.queryIntentActivities(leanbackIntent, 0))
+        val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        result.addAll(pm.queryIntentActivities(launcherIntent, 0))
+        return result.distinctBy { it.activityInfo.packageName }
+    }
+
+    /**
+     * 判断是否是系统应用
+     */
+    @JvmStatic
+    fun isSystemApp(context: Context, packageName: String): Boolean {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        return (appInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0) ||
+                (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0)
+    }
+
+    /**
+     * 获取应用banner
+     */
+    @JvmStatic
+    fun loadAppBanner(context: Context, packageName: String): Drawable? {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        return appInfo.loadBanner(pm)
+    }
+
+    /**
+     * 获取应用Icon
+     */
+    @JvmStatic
+    fun loadAppIcon(context: Context, packageName: String): Drawable? {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        return appInfo.loadIcon(pm)
+    }
+
+    /**
+     * 获取应用Label
+     */
+    @JvmStatic
+    fun loadAppLabel(context: Context, packageName: String): String {
+        val pm = context.packageManager
+        val appInfo = pm.getApplicationInfo(packageName, 0)
+        return appInfo.loadLabel(pm).toString()
     }
 
 }
