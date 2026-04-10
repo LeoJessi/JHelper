@@ -3,7 +3,6 @@ package top.jessi.jhelper.time
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
-import android.text.TextUtils
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -146,14 +145,21 @@ object Time {
      *
      * @param millisecond 精确到毫秒
      * @param format      格式
+     * @param timeZoneId 时区 - 默认使用设备时区
      * @return 格式化时间
      */
     @JvmStatic
-    fun timestampToDate(millisecond: Long, format: String?): String {
-        var tempFormat = format
-        if (TextUtils.isEmpty(tempFormat)) tempFormat = "yyyy-MM-dd HH:mm:ss"
-        val sdf = SimpleDateFormat(tempFormat, Locale.getDefault())
+    @JvmOverloads
+    fun formatTimestamp(millisecond: Long, format: String = "yyyy-MM-dd HH:mm:ss", timeZoneId: String = TimeZone.getDefault().id): String {
+        val sdf = SimpleDateFormat(format, Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone(timeZoneId)
         return sdf.format(Date(millisecond))
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun formatTimestamp(millisecond: Long, format: String = "yyyy-MM-dd HH:mm:ss", timeZone: TimeZone = TimeZone.getDefault()): String {
+        return formatTimestamp(millisecond, format, timeZone.id)
     }
 
     /**
@@ -164,8 +170,8 @@ object Time {
      * @return 时间戳 --- 精确到毫秒
      */
     @JvmStatic
-    fun dateToTimestamp(date: String?, format: String?): Long {
-        if (date.isNullOrBlank()) return 0
+    fun parseToTimestamp(date: String?, format: String?): Long {
+        if (date.isNullOrBlank()) return -1
         val sdf = SimpleDateFormat(format, Locale.getDefault())
         try {
             val parsedDate = sdf.parse(date)
@@ -173,7 +179,7 @@ object Time {
         } catch (e: ParseException) {
             e.printStackTrace()
         }
-        return 0
+        return -1
     }
 
     /**
