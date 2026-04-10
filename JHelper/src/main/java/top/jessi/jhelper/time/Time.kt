@@ -157,7 +157,6 @@ object Time {
     }
 
     @JvmStatic
-    @JvmOverloads
     fun formatTimestamp(millisecond: Long, format: String = "yyyy-MM-dd HH:mm:ss", timeZone: TimeZone = TimeZone.getDefault()): String {
         return formatTimestamp(millisecond, format, timeZone.id)
     }
