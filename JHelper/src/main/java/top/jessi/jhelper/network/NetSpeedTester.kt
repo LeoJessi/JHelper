@@ -8,25 +8,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import top.jessi.jhelper.time.Time
 import top.jessi.jhelper.time.Time.diffNow
-import java.net.HttpURLConnection
+import java.net.InetSocketAddress
+import java.net.Socket
 import java.net.URL
-
-/**
- * 单个源测速结果
- *
- * @param source 对应的播放源
- * @param speed 测速耗时（毫秒）
- *              Long.MAX_VALUE 表示测速失败（不可用）
- */
-data class TestResult(val source: String, val speed: Long)
-
-/**
- * 多源选择结果
- *
- * @param results 所有源的测速结果（包含成功和失败）
- * @param best 最优源（耗时最短的可用源），可能为 null（全部失败）
- */
-data class SelectionResult(val results: List<TestResult>, val best: TestResult?)
 
 /**
  * 智能播放源选择器
@@ -47,20 +31,35 @@ data class SelectionResult(val results: List<TestResult>, val best: TestResult?)
  */
 object NetSpeedTester {
 
+    /**
+     * 单个源测速结果
+     *
+     * @param source 对应的播放源
+     * @param speed 测速耗时（毫秒）
+     *              Long.MAX_VALUE 表示测速失败（不可用）
+     */
+    data class TestResult(val source: String, val speed: Long)
+
+    /**
+     * 多源选择结果
+     *
+     * @param results 所有源的测速结果（包含成功和失败）
+     * @param best 最优源（耗时最短的可用源），可能为 null（全部失败）
+     */
+    data class SelectionResult(val results: List<TestResult>, val best: TestResult?)
+
     /** TCP连接超时时间（毫秒） */
     private const val CONNECT_TIMEOUT = 2000
 
-    /** 数据读取超时时间（毫秒） */
-    private const val READ_TIMEOUT = 3000
+    // 探测字节
+    private const val TCP_PROBE_BYTE: Byte = 0x1
 
-    /**
-     * 测试数据大小（字节）
-     *
-     * 为什么只请求100KB？
-     * - 避免下载完整视频（节省流量）
-     * - 足够评估首包 + 带宽情况
-     */
-    private const val TEST_SIZE = 100 * 1024 // 100KB
+    // 读取缓冲区大小
+    private const val TCP_PROBE_READ_SIZE = 32
+
+    // TCP 读取超时时间
+    private const val TCP_READ_TIMEOUT_MS = 1000
+
 
     /**
      * 智能选择最佳播放源（推荐入口方法）
@@ -106,51 +105,49 @@ object NetSpeedTester {
      * - 手动测速
      */
     @JvmStatic
-    fun testSpeedPublic(url: String): Long = testSpeed(url)
+    fun testSingleSpeed(url: String): Long = testSpeed(url)
 
-    /**
-     * 核心测速实现（私有）
-     *
-     * 测速逻辑：
-     * 1. 建立 HTTP 连接
-     * 2. 请求前 TEST_SIZE 字节数据（Range）
-     * 3. 读取数据直到达到指定大小
-     * 4. 计算总耗时
-     *
-     * 为什么使用 Range 请求：
-     * - 避免下载整个视频文件
-     * - 更接近真实播放首包速度
-     *
-     * @param url 测试地址
-     * @return 耗时（毫秒），失败返回 Long.MAX_VALUE
-     */
     private fun testSpeed(url: String): Long {
-        val start = Time.currentTimeMillis()
-        return try {
-            val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                connectTimeout = CONNECT_TIMEOUT
-                readTimeout = READ_TIMEOUT
-                requestMethod = "GET"
-                // 只请求部分数据（用于测速）
-                setRequestProperty("Range", "bytes=0-$TEST_SIZE")
-                // 允许重定向（CDN / Cloudflare 场景常见）
-                instanceFollowRedirects = true
-            }
-            conn.connect()
-            // 读取数据（限制大小）
-            conn.inputStream.use { stream ->
-                val buffer = ByteArray(4096)
-                var total = 0
-
-                while (stream.read(buffer).also { total += it } != -1) {
-                    if (total >= TEST_SIZE) break
+        val uri = URL(url)
+        val host = uri.host
+        val port = if (uri.port != -1) uri.port else if (uri.protocol == "https") 443 else 80
+        val results = mutableListOf<Long>()
+        val testCount = 3
+        var successCount = 0
+        /* 测速3次 抗抖动 更接近真实链路质量 */
+        repeat(testCount) {
+            val cost = try {
+                val start = Time.currentTimeMillis()
+                Socket().use { socket ->
+                    socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT)
+                    // 向服务器发送极小数据包 触发真实通信路径（CDN / NAT / 代理） 避免“只connect但不通信”的假成功连接
+                    socket.getOutputStream().write(byteArrayOf(TCP_PROBE_BYTE))
+                    // 读数据的最大等待时间 防止 CDN / 防火墙连接建立但不返回数据导致卡死 控制测速最大等待时间（1秒）
+                    socket.soTimeout = TCP_READ_TIMEOUT_MS
+                    // 尝试读取少量数据（最多32字节） 判断是否有真实响应能力（不是死连接）
+                    runCatching {
+                        socket.getInputStream().read(ByteArray(TCP_PROBE_READ_SIZE))
+                    }
                 }
+                successCount++
+                start.diffNow()
+            } catch (e: Exception) {
+                Long.MAX_VALUE
             }
-            // 返回耗时
-            start.diffNow()
-        } catch (e: Exception) {
-            // 任意异常都认为测速失败
-            Long.MAX_VALUE
+            results.add(cost)
         }
+        val valid = results.filter { it != Long.MAX_VALUE }
+        if (valid.isEmpty()) return Long.MAX_VALUE
+        val min = valid.minOrNull()!!
+        val avg = valid.average()
+        val successRate = successCount.toDouble() / testCount
+        // 如果有某次测速失败 -- 相对于增加点返回的延迟
+        val penalty = when {
+            successRate >= 1.0 -> 0
+            successRate >= 0.66 -> 50
+            successRate >= 0.33 -> 200
+            else -> 500
+        }
+        return (((min + avg) / 2) + penalty).toLong()
     }
 }
