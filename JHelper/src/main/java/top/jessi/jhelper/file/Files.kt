@@ -368,7 +368,7 @@ object Files {
             curIndex++
             if (curIndex < offset) continue
             if (curIndex >= offset + pageSize) break
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
+            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA))
             val file = File(filePath)
             fileList.add(file)
         }
@@ -395,7 +395,7 @@ object Files {
             curIndex++
             if (curIndex < offset) continue
             if (curIndex >= offset + pageSize) break
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
+            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA))
             val file = File(filePath)
             fileList.add(file)
         }
@@ -428,7 +428,7 @@ object Files {
             curIndex++
             if (curIndex < offset) continue
             if (curIndex >= offset + pageSize) break
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
+            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA))
             val file = File(filePath)
             fileList.add(file)
         }

@@ -6,16 +6,12 @@ import android.os.Handler
 import android.os.Looper
 import android.text.TextUtils
 import android.view.Gravity
-import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import java.lang.ref.WeakReference
-import java.security.AccessController.getContext
 
 /**
  * Created by Jessi on 2026/2/28 10:21

@@ -3,6 +3,8 @@ package top.jessi.jhelper.time
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
+import top.jessi.jhelper.time.Time.getGmtOffsetHours
+import top.jessi.jhelper.time.Time.getGmtOffsetString
 import java.text.ParseException
 import java.text.SimpleDateFormat
 import java.time.LocalDateTime
@@ -249,6 +251,6 @@ object Time {
     @JvmOverloads
     fun getGmtOffsetHours(timeZone: TimeZone = TimeZone.getDefault()): Double {
         val offset = timeZone.getOffset(System.currentTimeMillis())
-        return offset / (60.0 * 60 * 1000)
+        return offset / 1.hour.toDouble()
     }
 }
