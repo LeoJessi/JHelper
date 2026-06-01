@@ -122,7 +122,7 @@ public class Salt {
      */
     public static ArrayList<Integer> getRandomNumArr(int count, int startNum, int endNum) {
         // 如果是倒序，则将数值颠倒
-        if (startNum > endNum){
+        if (startNum > endNum) {
             int temp = startNum;
             startNum = endNum;
             endNum = temp;
@@ -153,7 +153,7 @@ public class Salt {
      */
     public static ArrayList<Integer> getRandomNumArr(int count, int startNum, int endNum, int excludeNum) {
         // 如果是倒序，则将数值颠倒
-        if (startNum > endNum){
+        if (startNum > endNum) {
             int temp = startNum;
             startNum = endNum;
             endNum = temp;
@@ -187,7 +187,7 @@ public class Salt {
     public static ArrayList<Integer> getRandomNumArr(int count, int startNum, int endNum,
                                                      ArrayList<Integer> excludeNumArr) {
         // 如果是倒序，则将数值颠倒
-        if (startNum > endNum){
+        if (startNum > endNum) {
             int temp = startNum;
             startNum = endNum;
             endNum = temp;

@@ -4,6 +4,14 @@ import android.app.Activity;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.DiffUtil;
+
+import kotlin.Unit;
+import kotlin.coroutines.Continuation;
+import kotlin.jvm.functions.Function1;
+import kotlinx.coroutines.Dispatchers;
+import kotlinx.coroutines.DispatchersKt;
+import top.jessi.jhelper.thread.ThreadPool;
 
 /**
  * Created by Jessi on 2024/8/5 11:26
@@ -21,5 +29,11 @@ public class MainActivity extends Activity {
         String key = "994400LeoJessi10";
         String iv = "LeoJessi99440010";
 
+        ThreadPool.execute(Dispatchers.getMain(), new Function1<Continuation<? super Unit>, Object>() {
+            @Override
+            public Object invoke(Continuation<? super Unit> continuation) {
+                return null;
+            }
+        });
     }
 }
