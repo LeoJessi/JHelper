@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 /**
  * Created by Jessi on 2022/9/12
@@ -96,7 +95,7 @@ public class Salt {
         String allCharacters = alphabetsInLowerCase + alphabetsInUpperCase + numbers;
         StringBuilder randomString = new StringBuilder();
         for (int i = 0; i < length; i++) {
-            int randomIndex = (int) (Math.random() * allCharacters.length());
+            int randomIndex = RANDOM.nextInt(allCharacters.length());
             randomString.append(allCharacters.charAt(randomIndex));
         }
         return randomString.toString();
@@ -110,7 +109,7 @@ public class Salt {
      * @return 随机数
      */
     public static int getRandomNum(int min, int max) {
-        return new Random().nextInt(max + 1 - min) + min;
+        return RANDOM.nextInt(max + 1 - min) + min;
     }
 
     /**
@@ -132,11 +131,10 @@ public class Salt {
         int valueRange = endNum - startNum + 1;
         // 如果要取值的总数大于取值的范围数 --> 则将总数设置为范围数，否则程序会陷入死循环
         if (count > valueRange) count = valueRange;
-        Random random = new Random();
         ArrayList<Integer> arrayNum = new ArrayList<>();
         int randomValue;
         while (arrayNum.size() < count) {
-            randomValue = random.nextInt(valueRange) + startNum;
+            randomValue = RANDOM.nextInt(valueRange) + startNum;
             if (!arrayNum.contains(randomValue)) {
                 arrayNum.add(randomValue);
             }
@@ -166,11 +164,10 @@ public class Salt {
         if (count > valueRange) count = valueRange;
         // 如果排除数在取值范围内且 取值范围 - 1 < 要取值的总数，则取值的总数变换为剩下可以取值的数的总个数
         if (excludeNum >= startNum && excludeNum <= endNum && ((valueRange - 1) < count)) count--;
-        Random random = new Random();
         ArrayList<Integer> arrayNum = new ArrayList<>();
         int randomValue;
         while (arrayNum.size() < count) {
-            randomValue = random.nextInt(valueRange) + startNum;
+            randomValue = RANDOM.nextInt(valueRange) + startNum;
             if (randomValue != excludeNum && !arrayNum.contains(randomValue)) {
                 arrayNum.add(randomValue);
             }
@@ -206,11 +203,10 @@ public class Salt {
         }
         // 如果取值范围 - 需要排除的个数 < 要取值的总数，则取值的总数变换为剩下可以取值的数的总个数
         if ((valueRange - needExcludeSun) < count) count = valueRange - needExcludeSun;
-        Random random = new Random();
         ArrayList<Integer> arrayNum = new ArrayList<>();
         int randomValue;
         while (arrayNum.size() < count) {
-            randomValue = random.nextInt(valueRange) + startNum;
+            randomValue = RANDOM.nextInt(valueRange) + startNum;
             if (!excludeNumArr.contains(randomValue) && !arrayNum.contains(randomValue)) {
                 arrayNum.add(randomValue);
             }
