@@ -16,6 +16,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.channels.FileChannel
+import java.security.MessageDigest
 import java.util.Locale
 
 /**
@@ -421,6 +422,56 @@ object Files {
                 fileList.add(File(filePath))
             }
             fileList
+        }
+    }
+
+    /**
+     * 获取文件的 MD5 值（通过文件路径）
+     *
+     * @param filePath 文件路径
+     * @return 文件 MD5 字符串（小写），文件不存在或读取失败时返回空字符串
+     */
+    @JvmStatic
+    fun getFileMd5(filePath: String): String {
+        if (!isExists(filePath)) return ""
+        return getFileDigest(File(filePath), "MD5")
+    }
+
+    /**
+     * 获取文件的 MD5 值（通过 File 对象）
+     *
+     * @param file 文件对象
+     * @return 文件 MD5 字符串（小写），文件不存在或读取失败时返回空字符串
+     */
+    @JvmStatic
+    fun getFileMd5(file: File): String {
+        if (!file.exists() || file.isDirectory) return ""
+        return getFileDigest(file, "MD5")
+    }
+
+    /**
+     * 通用文件摘要算法，支持 MD5 / SHA-1 / SHA-256 等
+     *
+     * @param file      文件对象
+     * @param algorithm 算法名称，如 "MD5"、"SHA-1"、"SHA-256"
+     * @return 摘要字符串（小写），失败时返回空字符串
+     */
+    @JvmStatic
+    fun getFileDigest(file: File, algorithm: String): String {
+        if (!file.exists() || file.isDirectory) return ""
+        try {
+            val digest = MessageDigest.getInstance(algorithm)
+            FileInputStream(file).use { fis ->
+                val buffer = ByteArray(8192)
+                var read: Int
+                while (fis.read(buffer).also { read = it } != -1) {
+                    digest.update(buffer, 0, read)
+                }
+            }
+            return digest.digest().joinToString("") { "%02x".format(it) }
+        } catch (e: Exception) {
+            Log.w(TAG, "getFileDigest failed: ${file.absolutePath}, algorithm=$algorithm", e)
+            return ""
         }
     }
 
