@@ -1,8 +1,8 @@
 package top.jessi.jhelper.file
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.database.Cursor
 import android.provider.MediaStore
 import android.text.TextUtils
 import android.util.Log
@@ -13,7 +13,6 @@ import java.io.Closeable
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.io.FileWriter
 import java.io.IOException
 import java.io.InputStreamReader
 import java.nio.channels.FileChannel
@@ -25,6 +24,17 @@ import java.util.Locale
  * Describe：操作文件工具类
  */
 object Files {
+
+    private const val TAG = "Files"
+
+    /* M3U 查询相关常量 */
+    private val M3U_URI = MediaStore.Files.getContentUri("external")
+    private val M3U_PROJECTION = arrayOf(MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DISPLAY_NAME)
+    private const val M3U_SELECTION = ("(${MediaStore.Files.FileColumns.MIME_TYPE} IN (?, ?, ?)"
+            + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?"
+            + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?)")
+    private val M3U_SELECTION_ARGS =
+        arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
 
     /**
      * 判断文件是否存在
@@ -48,25 +58,21 @@ object Files {
         if (!file.exists() || file.isDirectory) {
             return "vnd.android.document/directory"
         }
-        var mimeType = ""
         var extension = MimeTypeMap.getFileExtensionFromUrl(file.absolutePath)
         if (TextUtils.isEmpty(extension)) {
             val fileName = file.name
-            if (fileName == "" || fileName.endsWith(".")) {
-                return "vnd.android.document/hidden"
-            }
             val lastDotIndex = fileName.lastIndexOf(".")
             if (lastDotIndex != -1 && lastDotIndex < fileName.length - 1) {
                 extension = fileName.substring(lastDotIndex + 1).lowercase(Locale.getDefault())
             }
         }
         if (!TextUtils.isEmpty(extension)) {
-            mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension).toString()
+            val mimeType = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+            if (!mimeType.isNullOrEmpty()) {
+                return mimeType
+            }
         }
-        if (TextUtils.isEmpty(mimeType)) {
-            mimeType = "application/octet-stream"
-        }
-        return mimeType
+        return "application/octet-stream"
     }
 
     /**
@@ -104,19 +110,21 @@ object Files {
      */
     @JvmStatic
     fun create(filePath: String): Boolean {
-        var isSuccess = false
         val file = File(filePath)
-        if (!file.exists()) {
-            try {
-                /*根据文件路径截取出文件所在文件夹，如文件夹不存在则先创建文件夹*/
-                val dirPath = filePath.substring(0, filePath.lastIndexOf("/"))
-                if (!isExists(dirPath)) createDir(dirPath)
-                isSuccess = file.createNewFile()
-            } catch (e: IOException) {
-                e.printStackTrace()
+        if (file.exists()) return false
+        try {
+            val parentFile = file.parentFile
+            if (parentFile != null && !parentFile.exists()) {
+                if (!parentFile.mkdirs()) {
+                    Log.w("Files", "create parent dir failed: ${parentFile.absolutePath}")
+                    return false
+                }
             }
+            return file.createNewFile()
+        } catch (e: IOException) {
+            Log.w("Files", "create file failed: $filePath", e)
+            return false
         }
-        return isSuccess
     }
 
     /**
@@ -129,7 +137,7 @@ object Files {
         try {
             closeable?.close()
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.w(TAG, "operation failed", e)
         }
     }
 
@@ -155,7 +163,7 @@ object Files {
             sourceChannel.transferTo(0, sourceChannel.size(), targetChannel)
             isSuccess = true
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w(TAG, "operation failed", e)
         } finally {
             closeQuietly(sourceChannel)
             closeQuietly(targetChannel)
@@ -164,7 +172,7 @@ object Files {
     }
 
     /**
-     * 移动文件
+     * 移动文件（支持跨分区移动）
      *
      * @param sourceFilePath 资源文件路径
      * @param targetFilePath 目标文件路径
@@ -174,18 +182,24 @@ object Files {
     fun moveFile(sourceFilePath: String, targetFilePath: String): Boolean {
         try {
             val sourceFile = File(sourceFilePath)
-            val targetFile = File(targetFilePath)
             if (!sourceFile.exists()) return false
             if (!isExists(targetFilePath)) if (!create(targetFilePath)) return false
-            return sourceFile.renameTo(targetFile)
+            val targetFile = File(targetFilePath)
+            // 优先使用 renameTo（同分区高效移动）
+            if (sourceFile.renameTo(targetFile)) return true
+            // renameTo 失败时（跨分区），回退到 copy + delete
+            if (copyFile(sourceFilePath, targetFilePath)) {
+                return delete(sourceFilePath)
+            }
+            return false
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.w("Files", "move file failed: $sourceFilePath -> $targetFilePath", e)
+            return false
         }
-        return false
     }
 
     /**
-     * 删除文件或目录
+     * 删除文件或目录（迭代方式，避免深层嵌套导致栈溢出）
      *
      * @param path 文件或目录的路径
      * @return true：删除成功 false：删除失败
@@ -193,16 +207,33 @@ object Files {
     @JvmStatic
     fun delete(path: String): Boolean {
         if (!isExists(path)) return false
-        val file = File(path)
-        if (!file.isFile) {
-            val files = file.listFiles()
-            if (files != null) {
-                for (f in files) {
-                    delete(f.absolutePath)
+        val root = File(path)
+        if (root.isFile) return root.delete()
+        // 使用栈迭代删除，避免递归栈溢出
+        val fileStack: ArrayDeque<File> = ArrayDeque()
+        fileStack.addLast(root)
+        val dirsToDelete = mutableListOf<File>()
+        while (fileStack.isNotEmpty()) {
+            val current = fileStack.removeLast()
+            val children = current.listFiles()
+            if (children.isNullOrEmpty()) {
+                if (!current.delete()) return false
+            } else {
+                dirsToDelete.add(current)
+                for (child in children) {
+                    if (child.isDirectory) {
+                        fileStack.addLast(child)
+                    } else {
+                        if (!child.delete()) return false
+                    }
                 }
             }
         }
-        return file.delete()
+        // 从子到父依次删除目录
+        for (dir in dirsToDelete.reversed()) {
+            if (!dir.delete()) return false
+        }
+        return true
     }
 
     /**
@@ -214,28 +245,21 @@ object Files {
     @JvmStatic
     fun read(filePath: String): String {
         if (!isExists(filePath) || File(filePath).length() <= 0) return ""
-        var inputStream: FileInputStream? = null
-        var bufferedReader: BufferedReader? = null
-        val stringBuilder = StringBuilder()
         try {
             val file = File(filePath)
-            inputStream = FileInputStream(file)
-            bufferedReader = BufferedReader(InputStreamReader(inputStream))
-            var line: String?
-            while (bufferedReader.readLine().also { line = it } != null) {
-                stringBuilder.append(line).append("\n")
+            FileInputStream(file).use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                    return reader.lineSequence().joinToString("\n")
+                }
             }
         } catch (e: IOException) {
-            e.printStackTrace()
-        } finally {
-            closeQuietly(bufferedReader)
-            closeQuietly(inputStream)
+            Log.w(TAG, "read file failed: $filePath", e)
+            return ""
         }
-        return stringBuilder.toString()
     }
 
     /**
-     * 将字符串写入指定文件
+     * 将字符串写入指定文件（使用 UTF-8 编码）
      *
      * @param filePath 文件路径
      * @param content  内容
@@ -243,19 +267,21 @@ object Files {
      */
     @JvmStatic
     fun write(filePath: String, content: String, append: Boolean): Boolean {
-        var isSuccess = false
-        var fileWriter: FileWriter? = null
+        var outputStream: FileOutputStream? = null
+        var writer: java.io.OutputStreamWriter? = null
         try {
-            fileWriter = FileWriter(filePath, append)
-            fileWriter.write(content)
-            fileWriter.flush()
-            isSuccess = true
+            outputStream = FileOutputStream(filePath, append)
+            writer = java.io.OutputStreamWriter(outputStream, Charsets.UTF_8)
+            writer.write(content)
+            writer.flush()
+            return true
         } catch (e: IOException) {
-            e.printStackTrace()
+            Log.w("Files", "write file failed: $filePath", e)
+            return false
         } finally {
-            closeQuietly(fileWriter)
+            closeQuietly(writer)
+            closeQuietly(outputStream)
         }
-        return isSuccess
     }
 
     /**
@@ -263,12 +289,7 @@ object Files {
      */
     @JvmStatic
     fun getImageTotal(context: Context): Int {
-        val cursor: Cursor = context.contentResolver.query(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, null
-        ) ?: return 0
-        val total = cursor.count
-        cursor.close()
-        return total
+        return queryMediaCount(context, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
     }
 
     /**
@@ -276,12 +297,7 @@ object Files {
      */
     @JvmStatic
     fun getVideoTotal(context: Context): Int {
-        val cursor: Cursor = context.contentResolver.query(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, null, null
-        ) ?: return 0
-        val total = cursor.count
-        cursor.close()
-        return total
+        return queryMediaCount(context, MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
     }
 
     /**
@@ -289,12 +305,15 @@ object Files {
      */
     @JvmStatic
     fun getAudioTotal(context: Context): Int {
-        val cursor: Cursor = context.contentResolver.query(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, null
-        ) ?: return 0
-        val total = cursor.count
-        cursor.close()
-        return total
+        return queryMediaCount(context, MediaStore.Audio.Media.EXTERNAL_CONTENT_URI)
+    }
+
+    /**
+     * 通用查询媒体数量，确保 Cursor 被正确关闭
+     */
+    private fun queryMediaCount(context: Context, uri: android.net.Uri): Int {
+        val cursor = context.contentResolver.query(uri, null, null, null, null) ?: return 0
+        return cursor.use { it.count }
     }
 
     /**
@@ -302,138 +321,107 @@ object Files {
      */
     @JvmStatic
     fun getM3UTotal(context: Context): Int {
-        val uri = MediaStore.Files.getContentUri("external")
-        val projection = arrayOf(MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DISPLAY_NAME)
-        val selection = ("(${MediaStore.Files.FileColumns.MIME_TYPE} IN (?, ?, ?)"
-                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?"
-                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?)")
-        val selectionArgs = arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
-        val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
-        val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
-                ?: return 0
-        val total = cursor.count
-        cursor.close()
-        return total
+        val cursor = context.contentResolver.query(
+            M3U_URI, M3U_PROJECTION, M3U_SELECTION, M3U_SELECTION_ARGS, null
+        ) ?: return 0
+        return cursor.use { it.count }
     }
 
     /**
      * 获取设备图片列表
      *
      * @param pageSize 每页查询大小
-     * @param curPage 当前查询页
+     * @param curPage 当前查询页（从0开始）
      */
     @JvmStatic
     fun getImageList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
-        // 默认按照最后修改时间倒序排序
-        val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC"
-        val cursor: Cursor = context.contentResolver.query(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
-        ) ?: return ArrayList()
-        val fileList: MutableList<File> = ArrayList()
-        // 查询下标
-        var curIndex = -1
-        // 偏移量 -- 获取起始下标
-        val offset = pageSize * curPage
-        while (cursor.moveToNext()) {
-            curIndex++
-            // 查询下标未到获取起始下标 -- 跳过此条数据
-            if (curIndex < offset) continue
-            // 查询下标已到需获取列表的最后一个下标 -- 跳出此次查询
-            if (curIndex >= offset + pageSize) break
-            /* 获取文件路径 */
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA))
-            val file = File(filePath)
-            fileList.add(file)
-        }
-        cursor.close()
-        return fileList
+        val sortOrder = "${MediaStore.Images.Media.DATE_MODIFIED} DESC LIMIT $pageSize OFFSET ${pageSize * curPage}"
+        return queryMediaFiles(
+            context,
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            null,
+            null,
+            null,
+            sortOrder,
+            MediaStore.Images.Media.DATA
+        )
     }
 
     /**
      * 获取设备视频列表
      *
      * @param pageSize 每页查询大小
-     * @param curPage 当前查询页
+     * @param curPage 当前查询页（从0开始）
      */
     @JvmStatic
     fun getVideoList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
-        val sortOrder = "${MediaStore.Video.Media.DATE_MODIFIED} DESC"
-        val cursor: Cursor = context.contentResolver.query(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
-        ) ?: return ArrayList()
-        val fileList: MutableList<File> = ArrayList()
-        var curIndex = -1
-        val offset = pageSize * curPage
-        while (cursor.moveToNext()) {
-            curIndex++
-            if (curIndex < offset) continue
-            if (curIndex >= offset + pageSize) break
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA))
-            val file = File(filePath)
-            fileList.add(file)
-        }
-        cursor.close()
-        return fileList
+        val sortOrder = "${MediaStore.Video.Media.DATE_MODIFIED} DESC LIMIT $pageSize OFFSET ${pageSize * curPage}"
+        return queryMediaFiles(
+            context,
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            null,
+            null,
+            null,
+            sortOrder,
+            MediaStore.Video.Media.DATA
+        )
     }
 
     /**
      * 获取设备音频列表
      *
      * @param pageSize 每页查询大小
-     * @param curPage 当前查询页
+     * @param curPage 当前查询页（从0开始）
      */
     @JvmStatic
     fun getAudioList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
-        val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
-        val cursor: Cursor = context.contentResolver.query(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, null, null, null, sortOrder
-        ) ?: return ArrayList()
-        val fileList: MutableList<File> = ArrayList()
-        var curIndex = -1
-        val offset = pageSize * curPage
-        while (cursor.moveToNext()) {
-            curIndex++
-            if (curIndex < offset) continue
-            if (curIndex >= offset + pageSize) break
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA))
-            val file = File(filePath)
-            fileList.add(file)
-        }
-        cursor.close()
-        return fileList
+        val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC LIMIT $pageSize OFFSET ${pageSize * curPage}"
+        return queryMediaFiles(
+            context,
+            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            null,
+            null,
+            null,
+            sortOrder,
+            MediaStore.Audio.Media.DATA
+        )
     }
 
     /**
      * 获取设备M3U列表
      *
      * @param pageSize 每页查询大小
-     * @param curPage 当前查询页
+     * @param curPage 当前查询页（从0开始）
      */
     @JvmStatic
     fun getM3UList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
-        val uri = MediaStore.Files.getContentUri("external")
-        val projection = arrayOf(MediaStore.Files.FileColumns.DATA, MediaStore.Files.FileColumns.DISPLAY_NAME)
-        val selection = ("(${MediaStore.Files.FileColumns.MIME_TYPE} IN (?, ?, ?)"
-                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?"
-                + " OR LOWER(${MediaStore.Files.FileColumns.DATA}) LIKE ?)")
-        val selectionArgs = arrayOf("audio/x-mpegurl", "application/x-mpegurl", "audio/mpegurl", "%.m3u", "%.m3u8")
-        val sortOrder = "${MediaStore.Audio.Media.DATE_MODIFIED} DESC"
-        val cursor =
-                context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
-                        ?: return ArrayList()
-        val fileList: MutableList<File> = ArrayList()
-        var curIndex = -1
-        val offset = pageSize * curPage
-        while (cursor.moveToNext()) {
-            curIndex++
-            if (curIndex < offset) continue
-            if (curIndex >= offset + pageSize) break
-            val filePath = cursor.getString(cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA))
-            val file = File(filePath)
-            fileList.add(file)
+        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT $pageSize OFFSET ${pageSize * curPage}"
+        return queryMediaFiles(
+            context, M3U_URI, M3U_PROJECTION, M3U_SELECTION, M3U_SELECTION_ARGS,
+            sortOrder, MediaStore.Files.FileColumns.DATA
+        )
+    }
+
+    // ==================== 通用私有方法 ====================
+
+    /**
+     * 通用查询媒体文件列表（完整参数版，使用 LIMIT/OFFSET 真分页）
+     */
+    @SuppressLint("Range")
+    private fun queryMediaFiles(
+        context: Context, uri: android.net.Uri, projection: Array<String>?, selection: String?,
+        selectionArgs: Array<String>?, sortOrder: String?, dataColumn: String
+    ): MutableList<File> {
+        val cursor = context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)
+            ?: return ArrayList()
+        return cursor.use {
+            val fileList = ArrayList<File>()
+            while (it.moveToNext()) {
+                val filePath = it.getString(it.getColumnIndexOrThrow(dataColumn))
+                fileList.add(File(filePath))
+            }
+            fileList
         }
-        cursor.close()
-        return fileList
     }
 
     /**
@@ -464,7 +452,7 @@ object Files {
         try {
             context.startActivity(intent)
         } catch (e: Exception) {
-            Log.w("Files", "open to external failure")
+            Log.w(TAG, "open to external failure: ${file.absolutePath}", e)
             return false
         }
         return true

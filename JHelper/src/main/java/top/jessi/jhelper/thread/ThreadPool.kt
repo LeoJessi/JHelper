@@ -1,6 +1,7 @@
 package top.jessi.jhelper.thread
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -77,10 +78,7 @@ object ThreadPool {
      * @throws IllegalStateException 如果线程池已关闭
      */
     @JvmStatic
-    fun execute(
-        dispatcher: CoroutineContext = Dispatchers.IO,
-        block: suspend () -> Unit
-    ): Job {
+    fun execute(dispatcher: CoroutineContext = Dispatchers.IO, block: suspend () -> Unit): Job {
         checkNotShutdown()
         return scope.launch(dispatcher) { block() }
     }
@@ -94,10 +92,7 @@ object ThreadPool {
      * @throws IllegalStateException 如果线程池已关闭
      */
     @JvmStatic
-    fun <T> submit(
-        dispatcher: CoroutineContext = Dispatchers.IO,
-        block: suspend () -> T
-    ): kotlinx.coroutines.Deferred<T> {
+    fun <T> submit(dispatcher: CoroutineContext = Dispatchers.IO, block: suspend () -> T): Deferred<T> {
         checkNotShutdown()
         return scope.async(dispatcher) { block() }
     }
@@ -122,7 +117,7 @@ object ThreadPool {
      * @throws IllegalStateException 如果线程池已关闭
      */
     @JvmStatic
-    fun <T> submit(callable: Callable<T>): kotlinx.coroutines.Deferred<T> {
+    fun <T> submit(callable: Callable<T>): Deferred<T> {
         return submit { callable.call() }
     }
 
@@ -137,10 +132,7 @@ object ThreadPool {
      * @throws IllegalStateException 如果线程池已关闭
      */
     @JvmStatic
-    suspend fun <T> submitAll(
-        dispatcher: CoroutineContext = Dispatchers.IO,
-        blocks: List<suspend () -> T>
-    ): List<T> {
+    suspend fun <T> submitAll(dispatcher: CoroutineContext = Dispatchers.IO, blocks: List<suspend () -> T>): List<T> {
         checkNotShutdown()
         return blocks.map { block ->
             scope.async(dispatcher) { block() }
@@ -156,10 +148,7 @@ object ThreadPool {
      * @throws IllegalStateException 如果线程池已关闭
      */
     @JvmStatic
-    fun <T> submitAll(
-        callables: List<Callable<T>>,
-        dispatcher: CoroutineContext = Dispatchers.IO
-    ): kotlinx.coroutines.Deferred<List<T>> {
+    fun <T> submitAll(callables: List<Callable<T>>, dispatcher: CoroutineContext = Dispatchers.IO): Deferred<List<T>> {
         checkNotShutdown()
         return scope.async {
             callables.map { callable ->
@@ -182,9 +171,7 @@ object ThreadPool {
      */
     @JvmStatic
     suspend fun <T> submitWithTimeout(
-        timeoutMillis: Long,
-        dispatcher: CoroutineContext = Dispatchers.IO,
-        block: suspend () -> T
+        timeoutMillis: Long, dispatcher: CoroutineContext = Dispatchers.IO, block: suspend () -> T
     ): T {
         checkNotShutdown()
         return withTimeout(timeoutMillis) {
