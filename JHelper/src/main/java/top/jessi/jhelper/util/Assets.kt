@@ -543,64 +543,6 @@ object Assets {
     }
 
 
-    /* ========================= Context扩展函数 ========================= */
-
-    /**
-     * 读取Asset文件内容
-     */
-    fun Context.readFile(assetPath: String): String? = readFile(this, assetPath)
-
-    /**
-     * 复制Asset文件
-     */
-    fun Context.copyTo(assetPath: String, destPath: String): Boolean = copyTo(this, assetPath, destPath)
-
-    /**
-     * 列出Asset目录文件
-     */
-    fun Context.listFiles(assetDir: String): Array<String> = listFiles(this, assetDir)
-
-    /**
-     * 检查Asset文件是否存在
-     */
-    fun Context.exists(assetPath: String): Boolean = exists(this, assetPath)
-
-    /**
-     * 获取Asset文件大小
-     */
-    fun Context.getSize(assetPath: String): Long = getSize(this, assetPath)
-
-    /**
-     * 获取Asset文件的AssetFileDescriptor
-     */
-    fun Context.openFileDescriptor(assetPath: String): AssetFileDescriptor? = openFileDescriptor(this, assetPath)
-
-    /**
-     * 读取Asset文件并解析为指定类型的对象
-     */
-    fun <T> Context.readFile(assetPath: String, type: Class<T>): T? = readFile(this, assetPath, type)
-
-    /**
-     * 读取Asset文件并解析为指定类型的对象（支持泛型）
-     */
-    fun <T> Context.readFile(assetPath: String, typeToken: TypeToken<T>): T? = readFile(this, assetPath, typeToken)
-
-    /**
-     * 从Asset加载字体文件
-     */
-    fun Context.loadFont(assetPath: String): Typeface? = loadFont(this, assetPath)
-
-    /**
-     * 从Asset加载字体文件并指定样式
-     */
-    fun Context.loadFont(assetPath: String, style: Int): Typeface? = loadFont(this, assetPath, style)
-
-    /**
-     * 从Asset目录批量加载所有字体文件
-     */
-    fun Context.loadFontsFromDirectory(fontDir: String): Map<String, Typeface> = loadFontsFromDirectory(this, fontDir)
-
-
     /* ========================= 私有辅助方法 ========================= */
 
     /**
