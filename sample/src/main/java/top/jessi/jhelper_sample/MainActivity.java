@@ -16,9 +16,5 @@ public class MainActivity extends Activity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        String plaintext = "Hello, World";
-        String key = "994400LeoJessi10";
-        String iv = "LeoJessi99440010";
     }
 }

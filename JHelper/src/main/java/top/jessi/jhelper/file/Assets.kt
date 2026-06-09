@@ -1,10 +1,11 @@
-package top.jessi.jhelper.util
+package top.jessi.jhelper.file
 
 import android.content.Context
 import android.content.res.AssetFileDescriptor
 import android.graphics.Typeface
 import android.util.Log
 import com.google.gson.reflect.TypeToken
+import top.jessi.jhelper.util.IGson
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
 import java.io.File
