@@ -28,11 +28,11 @@ import top.jessi.jhelper.thread.ThreadPool
  * SVG 支持由 MyGlide 模块提供
  *
  * DiskCacheStrategy 缓存策略：
- * - ALL: 缓存原始数据和转换后的数据 -- SVG图片不能使用这个？
+ * - ALL: 缓存原始数据和转换后的数据
  * - NONE: 不缓存
  * - DATA: 只缓存原始数据
  * - RESOURCE: 只缓存转换后的数据
- * - AUTOMATIC: 根据数据源自动选择策略（默认）
+ * - AUTOMATIC: 根据数据源自动选择策略（默认） SVG使用其他好像有点问题？
  *
  * 使用示例（Java）：
  * IGlide.load(imageView, url);

@@ -1,7 +1,7 @@
 package top.jessi.jhelper.image;
 
 import android.content.Context;
-import android.graphics.drawable.PictureDrawable;
+import android.graphics.drawable.BitmapDrawable;
 
 import androidx.annotation.NonNull;
 
@@ -35,11 +35,20 @@ public final class IGlideModule extends AppGlideModule {
             registry.replace(GlideUrl.class, InputStream.class, new OkHttpUrlLoader.Factory(client));
         }
 
-        // 注册 SVG 支持
-        registry.append(InputStream.class, SVG.class, new SvgDecoder());
-        registry.register(SVG.class, PictureDrawable.class, new SvgDrawableTranscoder());
+        // 注册 SVG 支持（使用 prepend 让 SvgDecoder 优先被调用）
+        // 将 SVG 渲染为 BitmapDrawable，避免 PictureDrawable 每次绘制时重新渲染
+        registry.prepend(InputStream.class, SVG.class, new SvgDecoder());
+        registry.register(SVG.class, BitmapDrawable.class, new SvgDrawableTranscoder());
     }
 
+    /**
+     * 创建信任所有证书的 OkHttpClient
+     *
+     * 注意：此方法会禁用 SSL 证书验证，仅用于开发测试环境
+     * 生产环境建议使用正确的 SSL 证书配置
+     *
+     * @return OkHttpClient 实例，创建失败时返回 null
+     */
     public static OkHttpClient getUnsafeOkHttpClient() {
         try {
             // 1. 信任所有证书
