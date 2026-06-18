@@ -37,16 +37,16 @@ object IGson {
         return fromJson(json, type)
     }
 
-    /** JSON → Set<T> */
+    /** JSON → LinkedHashSet<T> */
     @JvmStatic
-    fun <T> fromJsonToSet(json: String, clazz: Class<T>): Set<T> {
+    fun <T> fromJsonToSet(json: String, clazz: Class<T>): LinkedHashSet<T> {
         val type = TypeToken.getParameterized(LinkedHashSet::class.java, clazz).type
         return fromJson(json, type)
     }
 
     /** JSON → LinkedHashMap<K,V> */
     @JvmStatic
-    fun <K, V> fromJsonToMap(json: String, keyClass: Class<K>, valueClass: Class<V>): Map<K, V> {
+    fun <K, V> fromJsonToMap(json: String, keyClass: Class<K>, valueClass: Class<V>): LinkedHashMap<K, V> {
         val type = TypeToken.getParameterized(LinkedHashMap::class.java, keyClass, valueClass).type
         return fromJson(json, type)
     }
