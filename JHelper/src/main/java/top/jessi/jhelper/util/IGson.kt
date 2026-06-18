@@ -34,19 +34,27 @@ object IGson {
     @JvmStatic
     fun <T> fromJsonToList(json: String, clazz: Class<T>): List<T> {
         val type = TypeToken.getParameterized(List::class.java, clazz).type
-        return gson.fromJson(json, type)
+        return fromJson(json, type)
     }
 
+    /** JSON → Set<T> */
     @JvmStatic
-    fun <K, V> fromJsonToMap(json: String): Map<K, V> {
-        val type = object : TypeToken<LinkedHashMap<K, V>>() {}.type
-        return gson.fromJson(json, type)
+    fun <T> fromJsonToSet(json: String, clazz: Class<T>): Set<T> {
+        val type = TypeToken.getParameterized(LinkedHashSet::class.java, clazz).type
+        return fromJson(json, type)
+    }
+
+    /** JSON → LinkedHashMap<K,V> */
+    @JvmStatic
+    fun <K, V> fromJsonToMap(json: String, keyClass: Class<K>, valueClass: Class<V>): Map<K, V> {
+        val type = TypeToken.getParameterized(LinkedHashMap::class.java, keyClass, valueClass).type
+        return fromJson(json, type)
     }
 
     /** ✅ Kotlin专用: 支持复杂泛型推断 */
     inline fun <reified T> fromJson(json: String): T {
         val type = object : TypeToken<T>() {}.type
-        return gson.fromJson(json, type)
+        return fromJson(json, type)
     }
 
     /** 对象 → JSON 字符串 */
