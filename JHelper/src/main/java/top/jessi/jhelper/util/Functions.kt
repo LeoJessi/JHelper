@@ -1,6 +1,7 @@
 package top.jessi.jhelper.util
 
 import android.Manifest.permission
+import android.annotation.SuppressLint
 import android.app.UiModeManager
 import android.content.ComponentName
 import android.content.Context
@@ -21,7 +22,6 @@ import java.io.IOException
 import java.net.ServerSocket
 import java.util.Locale
 import java.util.regex.Pattern
-
 
 /**
  * Created by Jessi on 2024/10/31 10:49
@@ -330,6 +330,29 @@ object Functions {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
         return appInfo.loadIcon(pm)
+    }
+
+    /**
+     * 获取应用RoundIcon
+     *
+     * @param context     上下文
+     * @param packageName 包名
+     * @return Drawable? 如果未设置 roundIcon 或 API < 25 则返回 null
+     */
+    @JvmStatic
+    @SuppressLint("PrivateApi")
+    fun loadAppRoundIcon(context: Context, packageName: String): Drawable? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return null
+        val pm = context.packageManager
+        return try {
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            val roundIconRes = appInfo.javaClass.getDeclaredField("roundIconRes").apply {
+                isAccessible = true
+            }.getInt(appInfo)
+            if (roundIconRes != 0) pm.getDrawable(packageName, roundIconRes, appInfo) else null
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /**
