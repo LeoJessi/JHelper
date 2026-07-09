@@ -13,6 +13,7 @@ import com.bumptech.glide.request.target.CustomTarget
 import com.bumptech.glide.request.transition.Transition
 import kotlinx.coroutines.Dispatchers
 import top.jessi.jhelper.thread.ThreadPool
+import java.io.File
 
 /**
  * Glide图片加载工具类
@@ -421,6 +422,38 @@ class IGlide {
         fun clearAllCache(context: Context) {
             clearMemory(context)
             clearDisk(context)
+        }
+
+        /**
+         * 获取所有图片占用的磁盘缓存大小（字节）
+         *
+         * Glide 默认磁盘缓存目录为: cacheDir/image_manager_disk_cache/
+         * 方法会遍历该目录统计所有缓存文件的总字节数
+         *
+         * @param context Context
+         * @return 磁盘缓存总大小（字节）
+         */
+        @JvmStatic
+        fun getDiskCacheSize(context: Context): Long {
+            val cacheDir = File(context.cacheDir, "image_manager_disk_cache")
+            if (!cacheDir.exists() || !cacheDir.isDirectory) return 0L
+            return calculateDirSize(cacheDir)
+        }
+
+        /**
+         * 递归计算目录的总文件大小
+         */
+        private fun calculateDirSize(dir: File): Long {
+            var size = 0L
+            val files = dir.listFiles() ?: return 0L
+            for (file in files) {
+                size += if (file.isDirectory) {
+                    calculateDirSize(file)
+                } else {
+                    file.length()
+                }
+            }
+            return size
         }
 
         // ==================== 高级功能 ====================
