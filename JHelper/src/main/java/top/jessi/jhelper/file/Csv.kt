@@ -85,10 +85,14 @@ object Csv {
      * @param data CSV数据
      * @param charset 字符编码，默认UTF-8
      * @param append 是否追加模式，默认false（覆盖）
+     * @param deleteBackup 成功后是否删除备份文件，默认true（删除）
      */
     @JvmStatic
     @JvmOverloads
-    fun write(filePath: String, data: List<List<String>>, charset: Charset = Charsets.UTF_8, append: Boolean = false) {
+    fun write(
+        filePath: String, data: List<List<String>>,
+        charset: Charset = Charsets.UTF_8, append: Boolean = false, deleteBackup: Boolean = true
+    ) {
         if (append) {
             // 追加模式：直接写入目标文件 + sync
             val fos = FileOutputStream(filePath, true)
@@ -135,7 +139,8 @@ object Csv {
             tempFile.delete()
             return
         }
-        backupFile.delete()
+        // 默认删除备份，用户可选择保留备份文件
+        if (deleteBackup) backupFile.delete()
     }
 
     /**
@@ -228,12 +233,14 @@ object Csv {
      * @param colIndex 列索引
      * @param newValue 新值
      * @param charset 字符编码，默认UTF-8
+     * @param deleteBackup 成功后是否删除备份文件，默认true（删除）
      * @return 是否成功修改
      */
     @JvmStatic
     @JvmOverloads
     fun updateCell(
-        filePath: String, rowIndex: Int, colIndex: Int, newValue: String, charset: Charset = Charsets.UTF_8
+        filePath: String, rowIndex: Int, colIndex: Int, newValue: String,
+        charset: Charset = Charsets.UTF_8, deleteBackup: Boolean = true
     ): Boolean {
         require(rowIndex >= 0) { "行索引不能为负数" }
         require(colIndex >= 0) { "列索引不能为负数" }
@@ -280,7 +287,8 @@ object Csv {
             tempFile.delete()
             false
         } else {
-            backupFile.delete()
+            // 默认删除备份，用户可选择保留备份文件
+            if (deleteBackup) backupFile.delete()
             updated
         }
     }
@@ -293,13 +301,14 @@ object Csv {
      * @param updateColumn 更新列索引
      * @param newValue 新值
      * @param charset 字符编码，默认UTF-8
+     * @param deleteBackup 成功后是否删除备份文件，默认true（删除）
      * @return 是否成功修改
      */
     @JvmStatic
     @JvmOverloads
     fun updateRowByCondition(
         filePath: String, conditionColumn: Int, conditionValue: String,
-        updateColumn: Int, newValue: String, charset: Charset = Charsets.UTF_8
+        updateColumn: Int, newValue: String, charset: Charset = Charsets.UTF_8, deleteBackup: Boolean = true
     ): Boolean {
         require(conditionColumn >= 0) { "条件列索引不能为负数" }
         require(updateColumn >= 0) { "更新列索引不能为负数" }
@@ -344,7 +353,8 @@ object Csv {
             tempFile.delete()
             false
         } else {
-            backupFile.delete()
+            // 默认删除备份，用户可选择保留备份文件
+            if (deleteBackup) backupFile.delete()
             updated
         }
     }
