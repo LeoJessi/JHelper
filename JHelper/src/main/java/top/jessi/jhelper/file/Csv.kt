@@ -11,6 +11,7 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.io.PrintWriter
 import java.nio.charset.Charset
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Created by Jessi on 2026/6/9 10:21
@@ -20,6 +21,27 @@ import java.nio.charset.Charset
 object Csv {
 
     private const val TAG = "JHelper-Csv"
+
+    /**
+     * 文件锁，保证同一文件路径同一时间只被一个线程操作
+     * key=文件绝对路径, value=锁对象
+     */
+    private val fileLocks = ConcurrentHashMap<String, Any>()
+
+    /**
+     * 在文件锁内执行操作，避免同一文件并发读写冲突
+     */
+    private inline fun <T> withFileLock(filePath: String, block: () -> T): T {
+        val lock = fileLocks.getOrPut(filePath.intern()) { Any() }
+        return synchronized(lock) {
+            try {
+                block()
+            } finally {
+                // 清理不再使用的锁对象，防止内存泄漏
+                fileLocks.remove(filePath.intern(), lock)
+            }
+        }
+    }
 
     /**
      * 读取CSV文件
@@ -93,9 +115,27 @@ object Csv {
         filePath: String, data: List<List<String>>,
         charset: Charset = Charsets.UTF_8, append: Boolean = false, deleteBackup: Boolean = true
     ) {
-        if (append) {
-            // 追加模式：直接写入目标文件 + sync
-            val fos = FileOutputStream(filePath, true)
+        withFileLock(filePath) {
+            if (append) {
+                // 追加模式：直接写入目标文件 + sync
+                val fos = FileOutputStream(filePath, true)
+                try {
+                    PrintWriter(OutputStreamWriter(fos, charset)).use { writer ->
+                        for (row in data) {
+                            writer.println(joinLine(row.toMutableList()))
+                        }
+                        writer.flush()
+                        fos.fd.sync()
+                    }
+                } catch (e: IOException) {
+                    Log.w(TAG, "写入CSV文件失败: $filePath", e)
+                }
+                return@withFileLock
+            }
+            // 覆盖模式：写入临时文件 + sync + 备份式替换（防止清空）
+            val inputFile = File(filePath)
+            val tempFile = File("$filePath.tmp")
+            val fos = FileOutputStream(tempFile)
             try {
                 PrintWriter(OutputStreamWriter(fos, charset)).use { writer ->
                     for (row in data) {
@@ -106,41 +146,25 @@ object Csv {
                 }
             } catch (e: IOException) {
                 Log.w(TAG, "写入CSV文件失败: $filePath", e)
+                tempFile.delete()
+                return@withFileLock
             }
-            return
-        }
-        // 覆盖模式：写入临时文件 + sync + 备份式替换（防止清空）
-        val inputFile = File(filePath)
-        val tempFile = File("$filePath.tmp")
-        val fos = FileOutputStream(tempFile)
-        try {
-            PrintWriter(OutputStreamWriter(fos, charset)).use { writer ->
-                for (row in data) {
-                    writer.println(joinLine(row.toMutableList()))
-                }
-                writer.flush()
-                fos.fd.sync()
+            val backupFile = File("$filePath.bak")
+            backupFile.delete()
+            if (!inputFile.renameTo(backupFile)) {
+                Log.w(TAG, "无法创建备份，操作中止，原文件未修改: $filePath")
+                tempFile.delete()
+                return@withFileLock
             }
-        } catch (e: IOException) {
-            Log.w(TAG, "写入CSV文件失败: $filePath", e)
-            tempFile.delete()
-            return
+            if (!tempFile.renameTo(inputFile)) {
+                Log.w(TAG, "替换失败，正在从备份恢复: $filePath")
+                backupFile.renameTo(inputFile)
+                tempFile.delete()
+                return@withFileLock
+            }
+            // 默认删除备份，用户可选择保留备份文件
+            if (deleteBackup) backupFile.delete()
         }
-        val backupFile = File("$filePath.bak")
-        backupFile.delete()
-        if (!inputFile.renameTo(backupFile)) {
-            Log.w(TAG, "无法创建备份，操作中止，原文件未修改: $filePath")
-            tempFile.delete()
-            return
-        }
-        if (!tempFile.renameTo(inputFile)) {
-            Log.w(TAG, "替换失败，正在从备份恢复: $filePath")
-            backupFile.renameTo(inputFile)
-            tempFile.delete()
-            return
-        }
-        // 默认删除备份，用户可选择保留备份文件
-        if (deleteBackup) backupFile.delete()
     }
 
     /**
@@ -152,15 +176,17 @@ object Csv {
     @JvmStatic
     @JvmOverloads
     fun appendLine(filePath: String, row: List<String>, charset: Charset = Charsets.UTF_8) {
-        val fos = FileOutputStream(filePath, true)
-        try {
-            PrintWriter(OutputStreamWriter(fos, charset)).use { writer ->
-                writer.println(joinLine(row.toMutableList()))
-                writer.flush()
-                fos.fd.sync()
+        withFileLock(filePath) {
+            val fos = FileOutputStream(filePath, true)
+            try {
+                PrintWriter(OutputStreamWriter(fos, charset)).use { writer ->
+                    writer.println(joinLine(row.toMutableList()))
+                    writer.flush()
+                    fos.fd.sync()
+                }
+            } catch (e: IOException) {
+                Log.w(TAG, "追加CSV行失败: $filePath", e)
             }
-        } catch (e: IOException) {
-            Log.w(TAG, "追加CSV行失败: $filePath", e)
         }
     }
 
@@ -244,49 +270,51 @@ object Csv {
     ): Boolean {
         require(rowIndex >= 0) { "行索引不能为负数" }
         require(colIndex >= 0) { "列索引不能为负数" }
-        val inputFile = File(filePath)
-        val tempFile = File("$filePath.tmp")
-        var updated = false
-        try {
-            BufferedReader(InputStreamReader(FileInputStream(inputFile), charset)).use { reader ->
-                BufferedWriter(OutputStreamWriter(FileOutputStream(tempFile), charset)).use { writer ->
-                    var line: String?
-                    var currentRow = 0
-                    while (reader.readLine().also { line = it } != null) {
-                        if (currentRow == rowIndex) {
-                            val row = parseLine(line!!)
-                            if (colIndex < row.size) {
-                                row[colIndex] = newValue
-                                updated = true
+        return withFileLock(filePath) {
+            val inputFile = File(filePath)
+            val tempFile = File("$filePath.tmp")
+            var updated = false
+            try {
+                BufferedReader(InputStreamReader(FileInputStream(inputFile), charset)).use { reader ->
+                    BufferedWriter(OutputStreamWriter(FileOutputStream(tempFile), charset)).use { writer ->
+                        var line: String?
+                        var currentRow = 0
+                        while (reader.readLine().also { line = it } != null) {
+                            if (currentRow == rowIndex) {
+                                val row = parseLine(line!!)
+                                if (colIndex < row.size) {
+                                    row[colIndex] = newValue
+                                    updated = true
+                                }
+                                writer.write(joinLine(row))
+                            } else {
+                                writer.write(line)
                             }
-                            writer.write(joinLine(row))
-                        } else {
-                            writer.write(line)
+                            writer.newLine()
+                            currentRow++
                         }
-                        writer.newLine()
-                        currentRow++
                     }
                 }
+            } catch (e: IOException) {
+                Log.w(TAG, "修改CSV单元格失败: $filePath", e)
+                tempFile.delete()
+                return@withFileLock false
             }
-        } catch (e: IOException) {
-            Log.w(TAG, "修改CSV单元格失败: $filePath", e)
-            tempFile.delete()
-            return false
-        }
 
-        // 用备份式替换（兼容minSdk 21，任何失败可恢复）
-        val backupFile = File("$filePath.bak")
-        backupFile.delete()
-        return if (!inputFile.renameTo(backupFile)) {
-            Log.w(TAG, "无法创建备份，操作中止，原文件未修改: $filePath")
-            tempFile.delete()
-            false
-        } else if (!tempFile.renameTo(inputFile)) {
-            Log.w(TAG, "替换失败，正在从备份恢复: $filePath")
-            backupFile.renameTo(inputFile)
-            tempFile.delete()
-            false
-        } else {
+            // 用备份式替换（兼容minSdk 21，任何失败可恢复）
+            val backupFile = File("$filePath.bak")
+            backupFile.delete()
+            if (!inputFile.renameTo(backupFile)) {
+                Log.w(TAG, "无法创建备份，操作中止，原文件未修改: $filePath")
+                tempFile.delete()
+                return@withFileLock false
+            }
+            if (!tempFile.renameTo(inputFile)) {
+                Log.w(TAG, "替换失败，正在从备份恢复: $filePath")
+                backupFile.renameTo(inputFile)
+                tempFile.delete()
+                return@withFileLock false
+            }
             // 默认删除备份，用户可选择保留备份文件
             if (deleteBackup) backupFile.delete()
             updated
@@ -312,47 +340,49 @@ object Csv {
     ): Boolean {
         require(conditionColumn >= 0) { "条件列索引不能为负数" }
         require(updateColumn >= 0) { "更新列索引不能为负数" }
-        val inputFile = File(filePath)
-        val tempFile = File("$filePath.tmp")
-        var updated = false
-        try {
-            BufferedReader(InputStreamReader(FileInputStream(inputFile), charset)).use { reader ->
-                BufferedWriter(OutputStreamWriter(FileOutputStream(tempFile), charset)).use { writer ->
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        val row = parseLine(line!!)
-                        if (row.size > conditionColumn && row[conditionColumn] == conditionValue) {
-                            if (updateColumn < row.size) {
-                                row[updateColumn] = newValue
-                                updated = true
+        return withFileLock(filePath) {
+            val inputFile = File(filePath)
+            val tempFile = File("$filePath.tmp")
+            var updated = false
+            try {
+                BufferedReader(InputStreamReader(FileInputStream(inputFile), charset)).use { reader ->
+                    BufferedWriter(OutputStreamWriter(FileOutputStream(tempFile), charset)).use { writer ->
+                        var line: String?
+                        while (reader.readLine().also { line = it } != null) {
+                            val row = parseLine(line!!)
+                            if (row.size > conditionColumn && row[conditionColumn] == conditionValue) {
+                                if (updateColumn < row.size) {
+                                    row[updateColumn] = newValue
+                                    updated = true
+                                }
+                                writer.write(joinLine(row))
+                            } else {
+                                writer.write(line)
                             }
-                            writer.write(joinLine(row))
-                        } else {
-                            writer.write(line)
+                            writer.newLine()
                         }
-                        writer.newLine()
                     }
                 }
+            } catch (e: IOException) {
+                Log.w(TAG, "更新CSV行失败: $filePath", e)
+                tempFile.delete()
+                return@withFileLock false
             }
-        } catch (e: IOException) {
-            Log.w(TAG, "更新CSV行失败: $filePath", e)
-            tempFile.delete()
-            return false
-        }
 
-        // 用备份式替换（兼容minSdk 21，任何失败可恢复）
-        val backupFile = File("$filePath.bak")
-        backupFile.delete()
-        return if (!inputFile.renameTo(backupFile)) {
-            Log.w(TAG, "无法创建备份，操作中止，原文件未修改: $filePath")
-            tempFile.delete()
-            false
-        } else if (!tempFile.renameTo(inputFile)) {
-            Log.w(TAG, "替换失败，正在从备份恢复: $filePath")
-            backupFile.renameTo(inputFile)
-            tempFile.delete()
-            false
-        } else {
+            // 用备份式替换（兼容minSdk 21，任何失败可恢复）
+            val backupFile = File("$filePath.bak")
+            backupFile.delete()
+            if (!inputFile.renameTo(backupFile)) {
+                Log.w(TAG, "无法创建备份，操作中止，原文件未修改: $filePath")
+                tempFile.delete()
+                return@withFileLock false
+            }
+            if (!tempFile.renameTo(inputFile)) {
+                Log.w(TAG, "替换失败，正在从备份恢复: $filePath")
+                backupFile.renameTo(inputFile)
+                tempFile.delete()
+                return@withFileLock false
+            }
             // 默认删除备份，用户可选择保留备份文件
             if (deleteBackup) backupFile.delete()
             updated

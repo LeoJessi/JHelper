@@ -1,19 +1,29 @@
 package top.jessi.jhelper.image
 
 import android.content.Context
+import android.content.res.Resources
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.TransitionDrawable
 import android.widget.ImageView
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.RequestBuilder
+import com.bumptech.glide.load.DataSource
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.load.resource.bitmap.CenterCrop
 import com.bumptech.glide.load.resource.bitmap.RoundedCorners
+import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.request.transition.Transition
 import kotlinx.coroutines.Dispatchers
 import top.jessi.jhelper.thread.ThreadPool
 import java.io.File
+import java.util.WeakHashMap
 
 /**
  * Glide图片加载工具类
@@ -42,6 +52,8 @@ import java.io.File
  * IGlide.loadRound(imageView, url, 20, R.drawable.placeholder, R.drawable.error);
  * IGlide.loadGif(imageView, gifUrl);
  * IGlide.loadWithCallback(context, url, callback);
+ * IGlide.loadCrossFade(imageView, url, 500, 0, R.drawable.error, callback);
+ * IGlide.clearCrossFade(imageView);
  *
  * 使用示例（Kotlin）：
  * IGlide.load(imageView, url)
@@ -50,6 +62,8 @@ import java.io.File
  * IGlide.loadRound(imageView, url, 20, R.drawable.placeholder, R.drawable.error)
  * IGlide.loadGif(imageView, gifUrl)
  * IGlide.loadWithCallback(context, url, callback = callback)
+ * IGlide.loadCrossFade(imageView, url, durationMs = 500, error = R.drawable.error, callback = callback)
+ * IGlide.clearCrossFade(imageView)
  */
 class IGlide {
 
@@ -497,6 +511,125 @@ class IGlide {
                 })
         }
 
+        // ==================== 交叉淡入淡出 ====================
+
+        /**
+         * 按 ImageView 维度保存上一次显示的图片 Drawable（深拷贝后的安全副本）。
+         * 使用 WeakHashMap 避免因持有 ImageView 导致内存泄漏。
+         */
+        private val lastDrawableMap = WeakHashMap<ImageView, Drawable>()
+
+        /**
+         * 交叉淡入淡出加载图片
+         *
+         * 加载新图片并与上一张图产生 [durationMs] 毫秒的交叉淡入淡出过渡动画。
+         * 旧图淡出 + 新图淡入同时进行。
+         * 首次对某个 ImageView 调用时无过渡动画，直接显示新图。
+         *
+         * 内部自动维护每个 ImageView 上一次显示的 Drawable，调用方无需手动传递。
+         * 已内置 Bitmap 深拷贝逻辑，防止 Glide 回收内部 Bitmap 导致的崩溃。
+         *
+         * @param imageView 目标 ImageView
+         * @param source 图片源（支持 String / Uri / File / Int / Bitmap 等）
+         * @param placeholder 占位图资源ID，0 表示不设置（首次加载时使用）
+         * @param error 错误图资源ID，0 表示不设置
+         * @param diskCacheStrategy 磁盘缓存策略，默认为AUTOMATIC
+         * @param durationMs 淡入淡出时长（毫秒），默认 800
+         * @param callback 加载完成回调（失败时仅 [GlideCallback.onFailure] 被调用）
+         */
+        @JvmOverloads
+        @JvmStatic
+        fun loadCrossFade(
+            imageView: ImageView,
+            source: Any?,
+            placeholder: Int = 0,
+            error: Int = 0,
+            diskCacheStrategy: DiskCacheStrategy = DiskCacheStrategy.AUTOMATIC,
+            durationMs: Int = 800,
+            callback: GlideCallback? = null
+        ) {
+            // 从内部 map 取出该 ImageView 上一次的 Drawable 作为旧图
+            val oldDrawable = lastDrawableMap[imageView]
+            // 决议占位图：旧图优先，首次加载时回退到 placeholder 资源ID
+            val placeholderDrawable = oldDrawable ?: if (placeholder != 0) {
+                ContextCompat.getDrawable(imageView.context, placeholder)
+            } else {
+                null
+            }
+            // 将旧图作为 Glide 占位图，保证加载过程中 ImageView 保持显示旧图，避免闪烁
+            Glide.with(imageView.context)
+                .load(source)
+                .applyOptions(placeholderDrawable, error)
+                .diskCacheStrategy(diskCacheStrategy)
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean
+                    ): Boolean {
+                        // 加载失败时清除缓存，避免下一次切换的时候还有上一张图片的残影
+                        clearCrossFade(imageView)
+                        callback?.onFailure(e)
+                        return false
+                    }
+
+                    override fun onResourceReady(
+                        resource: Drawable, model: Any, target: Target<Drawable>?,
+                        dataSource: DataSource, isFirstResource: Boolean
+                    ): Boolean {
+                        if (oldDrawable == null) {
+                            // 首次加载：直接显示新图，无过渡
+                            imageView.setImageDrawable(resource)
+                        } else {
+                            // 交叉淡入淡出：旧图渐隐 + 新图渐显
+                            val transition = TransitionDrawable(arrayOf(oldDrawable, resource))
+                            transition.isCrossFadeEnabled = true
+                            imageView.setImageDrawable(transition)
+                            transition.startTransition(durationMs)
+                        }
+                        // 深拷贝一份存入 map，供下次切换使用
+                        lastDrawableMap[imageView] = copyDrawable(imageView.context.resources, resource)
+                        callback?.onSuccess(lastDrawableMap[imageView]!!)
+                        return true // 阻止 Glide 默认设置，由我们手动控制
+                    }
+                })
+                .into(imageView)
+        }
+
+        /**
+         * 清除指定 ImageView 缓存的上一次 Drawable。
+         * 在 ImageView 被销毁或不再需要过渡效果时调用，避免内存泄漏。
+         */
+        @JvmStatic
+        fun clearCrossFade(imageView: ImageView) {
+            lastDrawableMap.remove(imageView)
+        }
+
+        /**
+         * 清除所有 ImageView 缓存的上一次 Drawable。
+         */
+        @JvmStatic
+        fun clearAllCrossFade() {
+            lastDrawableMap.clear()
+        }
+
+        /**
+         * 对 Drawable 做深拷贝，防止其底层 Bitmap 被外部（如 Glide）回收后
+         * 导致 TransitionDrawable 绘制时抛出 "trying to use a recycled bitmap" 异常。
+         */
+        private fun copyDrawable(resources: Resources, drawable: Drawable): Drawable {
+            if (drawable is BitmapDrawable && drawable.bitmap != null) {
+                val bitmap = drawable.bitmap
+                // copy 一份新 Bitmap；config 为 null 时用 ARGB_8888 兜底
+                val copied = bitmap.copy(bitmap.config ?: Bitmap.Config.ARGB_8888, false)
+                if (copied != null) {
+                    return copied.toDrawable(resources)
+                }
+            }
+            // 非 BitmapDrawable 或拷贝失败兜底：通过 constantState 重建独立副本
+            return drawable.constantState?.newDrawable()?.mutate() ?: drawable
+        }
+
+        // ==================== 内部工具方法 ====================
+
         /**
          * 应用占位图和错误图配置
          *
@@ -507,6 +640,21 @@ class IGlide {
         private fun <T> RequestBuilder<T>.applyOptions(placeholder: Int, error: Int): RequestBuilder<T> {
             return this
                 .apply { if (placeholder != 0) placeholder(placeholder) }
+                .apply { if (error != 0) error(error) }
+        }
+
+        /**
+         * 应用占位图和错误图配置（重载：接受 Drawable 类型的占位图）
+         *
+         * 适用于交叉淡入淡出等需要在调用方提前决议占位图的场景。
+         *
+         * @param placeholder 占位图 Drawable，null 表示不设置
+         * @param error 错误图资源ID，0表示不设置
+         * @return 配置后的RequestBuilder
+         */
+        private fun <T> RequestBuilder<T>.applyOptions(placeholder: Drawable?, error: Int): RequestBuilder<T> {
+            return this
+                .apply { if (placeholder != null) placeholder(placeholder) }
                 .apply { if (error != 0) error(error) }
         }
     }
