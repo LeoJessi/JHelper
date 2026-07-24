@@ -45,7 +45,7 @@ object ViewExtensions {
      * 设置控件宽度
      * @param width 宽度值（px）
      */
-    fun View.setWidth(width: Int) {
+    fun View.width(width: Int) {
         val params = layoutParams
         params.width = width
         layoutParams = params
@@ -55,7 +55,7 @@ object ViewExtensions {
      * 设置控件高度
      * @param height 高度值（px）
      */
-    fun View.setHeight(height: Int) {
+    fun View.height(height: Int) {
         val params = layoutParams
         params.height = height
         layoutParams = params
