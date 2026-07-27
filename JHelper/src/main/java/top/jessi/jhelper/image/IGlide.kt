@@ -289,12 +289,14 @@ class IGlide {
             imageView: ImageView, source: Any?, width: Int, height: Int, placeholder: Int = 0, error: Int = 0,
             diskCacheStrategy: DiskCacheStrategy = DiskCacheStrategy.AUTOMATIC
         ) {
-            Glide.with(imageView.context)
+            val requestBuilder = Glide.with(imageView.context)
                 .load(source)
                 .applyOptions(placeholder, error)
-                .override(width, height)
                 .diskCacheStrategy(diskCacheStrategy)
-                .into(imageView)
+            if (width > 0 && height > 0) {
+                requestBuilder.override(width, height)
+            }
+            requestBuilder.into(imageView)
         }
 
         /**
@@ -480,6 +482,8 @@ class IGlide {
          *
          * @param context Context
          * @param source 图片源（支持多种类型）
+         * @param width 宽度（px）
+         * @param height 高度（px）
          * @param placeholder 占位图资源ID，0表示不设置
          * @param error 错误图资源ID，0表示不设置
          * @param diskCacheStrategy 磁盘缓存策略，默认为AUTOMATIC
@@ -488,27 +492,30 @@ class IGlide {
         @JvmOverloads
         @JvmStatic
         fun loadWithCallback(
-            context: Context, source: Any?, placeholder: Int = 0, error: Int = 0,
+            context: Context, source: Any?, width: Int, height: Int, placeholder: Int = 0, error: Int = 0,
             diskCacheStrategy: DiskCacheStrategy = DiskCacheStrategy.AUTOMATIC,
             callback: GlideCallback?
         ) {
-            Glide.with(context)
+            val requestBuilder = Glide.with(context)
                 .load(source)
                 .applyOptions(placeholder, error)
                 .diskCacheStrategy(diskCacheStrategy)
-                .into(object : CustomTarget<Drawable>() {
-                    override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
-                        callback?.onSuccess(resource)
-                    }
+            if (width > 0 && height > 0) {
+                requestBuilder.override(width, height)
+            }
+            requestBuilder.into(object : CustomTarget<Drawable>() {
+                override fun onResourceReady(resource: Drawable, transition: Transition<in Drawable>?) {
+                    callback?.onSuccess(resource)
+                }
 
-                    override fun onLoadCleared(placeholder: Drawable?) {
-                        // 资源被清除时的回调，通常不需要处理
-                    }
+                override fun onLoadCleared(placeholder: Drawable?) {
+                    // 资源被清除时的回调，通常不需要处理
+                }
 
-                    override fun onLoadFailed(errorDrawable: Drawable?) {
-                        callback?.onFailure(null)
-                    }
-                })
+                override fun onLoadFailed(errorDrawable: Drawable?) {
+                    callback?.onFailure(null)
+                }
+            })
         }
 
         // ==================== 交叉淡入淡出 ====================
