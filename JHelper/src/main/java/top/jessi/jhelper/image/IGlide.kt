@@ -492,7 +492,7 @@ class IGlide {
         @JvmOverloads
         @JvmStatic
         fun loadWithCallback(
-            context: Context, source: Any?, width: Int, height: Int, placeholder: Int = 0, error: Int = 0,
+            context: Context, source: Any?, width: Int = 0, height: Int = 0, placeholder: Int = 0, error: Int = 0,
             diskCacheStrategy: DiskCacheStrategy = DiskCacheStrategy.AUTOMATIC,
             callback: GlideCallback?
         ) {
