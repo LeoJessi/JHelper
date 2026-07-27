@@ -1,153 +1,310 @@
 package top.jessi.jhelper.network
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import top.jessi.jhelper.time.Time
-import top.jessi.jhelper.time.Time.diffNow
-import java.net.InetSocketAddress
-import java.net.Socket
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
+import java.io.IOException
+import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URL
+import java.util.concurrent.Executors
 
 /**
- * 智能播放源选择器
+ * 网络测速工具类
  *
- * 功能：
- * 1. 并发测速多个播放源
- * 2. 计算每个源的响应耗时
- * 3. 自动选出最快的可用源
- * 4. 结果回调到主线程（可直接更新 UI）
+ * Java 使用方式：
+ * ```
+ * SpeedTestManager speedTest = new SpeedTestManager();
+ * speedTest.setCallback(new SpeedTestManager.Callback() {
+ *     @Override
+ *     public void onProgress(double currentSpeedMbps, int progress) { }
  *
- * 线程模型：
- * - 测速逻辑运行在 Dispatchers.IO（子线程）
- * - 回调运行在 Dispatchers.Main（主线程）
+ *     @Override
+ *     public void onResult(double speedMbps) { }
  *
- * 适用场景：
- * - 播放器启动前选源
- * - 多 CDN / 多域名调度
+ *     @Override
+ *     public void onError(SpeedTestManager.Error error) { }
+ * });
+ * speedTest.start();
+ *
+ * // 取消测速
+ * speedTest.cancel();
+ * ```
+ *
+ * Kotlin 使用方式：
+ * ```
+ * val speedTest = SpeedTestManager()
+ * speedTest.callback = object : SpeedTestManager.Callback {
+ *     override fun onProgress(currentSpeedMbps: Double, progress: Int) { }
+ *     override fun onResult(speedMbps: Double) { }
+ *     override fun onError(error: SpeedTestManager.Error) { }
+ * }
+ * speedTest.start()
+ * ```
+ *
+ * Created by Jessi on 2026/7/27
+ * Email：17324719944@189.cn
  */
-object NetSpeedTester {
+class NetSpeedTester {
+
+    // ======================== 配置 ========================
+
+    companion object {
+        private const val TAG = "SpeedTestManager"
+    }
 
     /**
-     * 单个源测速结果
-     *
-     * @param source 对应的播放源
-     * @param speed 测速耗时（毫秒）
-     *              Long.MAX_VALUE 表示测速失败（不可用）
+     * 测速文件大小（字节），默认 20MB
      */
-    data class TestResult(val source: String, val speed: Long)
+    var testFileSize: Long = 20L * 1024 * 1024
 
     /**
-     * 多源选择结果
-     *
-     * @param results 所有源的测速结果（包含成功和失败）
-     * @param best 最优源（耗时最短的可用源），可能为 null（全部失败）
+     * 最大测速时间（毫秒），默认 15 秒（含 2 秒预热）
      */
-    data class SelectionResult(val results: List<TestResult>, val best: TestResult?)
-
-    /** TCP连接超时时间（毫秒） */
-    private const val CONNECT_TIMEOUT = 2000
-
-    // 探测字节
-    private const val TCP_PROBE_BYTE: Byte = 0x1
-
-    // 读取缓冲区大小
-    private const val TCP_PROBE_READ_SIZE = 32
-
-    // TCP 读取超时时间
-    private const val TCP_READ_TIMEOUT_MS = 1000
-
+    var maxTestDurationMs: Long = 15_000L
 
     /**
-     * 智能选择最佳播放源（推荐入口方法）
-     *
-     * 执行流程：
-     * 1. 在 IO 线程并发测速所有源
-     * 2. 收集每个源的耗时
-     * 3. 过滤失败源（Long.MAX_VALUE）
-     * 4. 选出耗时最短的源
-     * 5. 切回主线程返回结果
-     *
-     * @param sources 播放源列表
-     * @param callback 回调结果（主线程）
+     * 连接超时时间（毫秒），默认 15 秒
      */
-    @JvmStatic
-    fun selectBestNet(sources: List<String>, callback: (SelectionResult) -> Unit) {
-        CoroutineScope(Dispatchers.IO).launch {
-            // 并发测速（每个源一个协程）
-            val results = sources.map { source ->
-                async {
-                    val speed = testSpeed(source)
-                    TestResult(source, speed)
+    var connectTimeoutMs: Int = 15_000
+
+    /**
+     * 读取超时时间（毫秒），默认 15 秒
+     */
+    var readTimeoutMs: Int = 15_000
+
+    /**
+     * 测速 URL 列表（按优先级排序）
+     */
+    var speedTestUrls: List<String> = listOf(
+        "https://speed.cloudflare.com/__down?bytes=$testFileSize",
+        "http://cachefly.cachefly.net/20mb.test",
+        "https://speedtest-sg1.digitalocean.com/20mb.test",
+        "https://speedtest.tele2.net/20MB.zip"
+    )
+
+    // ======================== 回调 ========================
+
+    /**
+     * 测速回调（所有回调均在主线程）
+     */
+    var callback: Callback? = null
+
+    // ======================== 线程 ========================
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val executor = Executors.newSingleThreadExecutor()
+
+    /**
+     * 是否正在测速
+     */
+    var isTesting = false
+        private set
+
+    // ======================== 控制 ========================
+
+    /**
+     * 开始测速
+     *
+     * @param customUrl 自定义测速 URL（可选），传入后仅使用该 URL 测速
+     */
+    fun start(customUrl: String? = null) {
+        if (isTesting) return
+        isTesting = true
+        executor.execute { performSpeedTest(customUrl) }
+    }
+
+    /**
+     * 取消测速
+     */
+    fun cancel() {
+        isTesting = false
+        // 立即关闭连接，让阻塞中的 read() 快速返回
+        currentConnection?.disconnect()
+    }
+
+    // 当前正在使用的连接，用于取消时快速中断
+    @Volatile
+    private var currentConnection: HttpURLConnection? = null
+
+    // ======================== 核心逻辑 ========================
+
+    private fun performSpeedTest(customUrl: String? = null) {
+        // 优先使用自定义 URL，否则使用默认列表
+        val urls = if (!customUrl.isNullOrEmpty()) {
+            listOf(customUrl)
+        } else {
+            speedTestUrls
+        }
+        var finalSpeedMbps = 0.0
+        var resultError: Error? = null
+        var isTimeout = false
+
+        for ((index, url) in urls.withIndex()) {
+            if (!isTesting) {
+                resultError = Error.CANCELLED
+                break
+            }
+
+            Log.d(TAG, "start speed test [$index/${urls.size - 1}]")
+
+            when (val result = tryDownload(url)) {
+                is DownloadResult.Success -> {
+                    finalSpeedMbps = result.speedMbps
+                    resultError = null
+                    break
                 }
-            }.awaitAll()
 
-            // 选出最快的可用源（排除失败）
-            val best = results
-                    .filter { it.speed != Long.MAX_VALUE }
-                    .minByOrNull { it.speed }
+                is DownloadResult.Timeout -> {
+                    isTimeout = true
+                }
 
-            // 切回主线程返回结果（安全更新UI）
-            withContext(Dispatchers.Main) {
-                callback(SelectionResult(results, best))
+                is DownloadResult.Error -> {
+
+                }
+            }
+        }
+
+        // 确定最终错误类型
+        if (resultError == null && finalSpeedMbps <= 0) {
+            resultError = if (isTimeout) Error.TIMEOUT else Error.FAILED
+        }
+
+        // 回调到主线程
+        val finalSpeed = finalSpeedMbps
+        val finalError = resultError
+        mainHandler.post {
+            isTesting = false
+            if (finalError == null) {
+                callback?.onResult(finalSpeed)
+            } else {
+                callback?.onError(finalError)
             }
         }
     }
 
-    /**
-     * 对外暴露的测速方法（单个源）
-     *
-     * 使用场景：
-     * - 调试某个域名速度
-     * - 手动测速
-     */
-    @JvmStatic
-    fun testSingleSpeed(url: String): Long = testSpeed(url)
+    private fun tryDownload(urlString: String): DownloadResult {
+        val startTime = System.currentTimeMillis()
+        var downloadedBytes = 0L
+        var connection: HttpURLConnection? = null
 
-    private fun testSpeed(url: String): Long {
-        val uri = URL(url)
-        val host = uri.host
-        val port = if (uri.port != -1) uri.port else if (uri.protocol == "https") 443 else 80
-        val results = mutableListOf<Long>()
-        val testCount = 3
-        var successCount = 0
-        /* 测速3次 抗抖动 更接近真实链路质量 */
-        repeat(testCount) {
-            val cost = try {
-                val start = Time.currentTimeMillis()
-                Socket().use { socket ->
-                    socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT)
-                    // 向服务器发送极小数据包 触发真实通信路径（CDN / NAT / 代理） 避免“只connect但不通信”的假成功连接
-                    socket.getOutputStream().write(byteArrayOf(TCP_PROBE_BYTE))
-                    // 读数据的最大等待时间 防止 CDN / 防火墙连接建立但不返回数据导致卡死 控制测速最大等待时间（1秒）
-                    socket.soTimeout = TCP_READ_TIMEOUT_MS
-                    // 尝试读取少量数据（最多32字节） 判断是否有真实响应能力（不是死连接）
-                    runCatching {
-                        socket.getInputStream().read(ByteArray(TCP_PROBE_READ_SIZE))
+        try {
+            val url = URL(urlString)
+            connection = url.openConnection() as HttpURLConnection
+            currentConnection = connection
+            connection.apply {
+                requestMethod = "GET"
+                connectTimeout = connectTimeoutMs
+                readTimeout = readTimeoutMs
+                instanceFollowRedirects = true
+                setRequestProperty("Connection", "close")
+            }
+
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val inputStream = connection.inputStream
+                val buffer = ByteArray(16 * 1024)
+                var bytesRead: Int
+                var lastUpdateTime = startTime
+
+                while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                    if (!isTesting) {
+                        inputStream.close()
+                        return DownloadResult.Error(IOException("cancelled"))
+                    }
+                    downloadedBytes += bytesRead
+                    val now = System.currentTimeMillis()
+                    val elapsed = now - startTime
+
+                    // 每 200ms 回调进度
+                    if (now - lastUpdateTime > 200) {
+                        lastUpdateTime = now
+                        val currentSpeed = (downloadedBytes * 8.0) / (elapsed / 1000.0) / 1_000_000.0
+                        val progress = ((elapsed.toFloat() / maxTestDurationMs) * 100).toInt().coerceIn(0, 100)
+                        mainHandler.post {
+                            callback?.onProgress(currentSpeed, progress)
+                        }
+                    }
+
+                    // 达到最大测速时间，停止
+                    if (elapsed >= maxTestDurationMs) {
+                        break
                     }
                 }
-                successCount++
-                start.diffNow()
-            } catch (e: Exception) {
-                Long.MAX_VALUE
+                inputStream.close()
+
+                val totalElapsed = System.currentTimeMillis() - startTime
+                return if (downloadedBytes > 0 && totalElapsed > 0) {
+                    val speedMbps = (downloadedBytes * 8.0) / (totalElapsed / 1000.0) / 1_000_000.0
+                    DownloadResult.Success(speedMbps)
+                } else {
+                    DownloadResult.Error(IOException("no data"))
+                }
+            } else {
+                return DownloadResult.Error(IOException("HTTP $responseCode"))
             }
-            results.add(cost)
+        } catch (e: SocketTimeoutException) {
+            return DownloadResult.Timeout
+        } catch (e: IOException) {
+            return if (e.message?.lowercase()?.contains("timeout") == true) {
+                DownloadResult.Timeout
+            } else {
+                DownloadResult.Error(e)
+            }
+        } catch (e: Exception) {
+            return DownloadResult.Error(IOException(e.message))
+        } finally {
+            currentConnection = null
+            connection?.disconnect()
         }
-        val valid = results.filter { it != Long.MAX_VALUE }
-        if (valid.isEmpty()) return Long.MAX_VALUE
-        val min = valid.minOrNull()!!
-        val avg = valid.average()
-        val successRate = successCount.toDouble() / testCount
-        // 如果有某次测速失败 -- 相对于增加点返回的延迟
-        val penalty = when {
-            successRate >= 1.0 -> 0
-            successRate >= 0.66 -> 50
-            successRate >= 0.33 -> 200
-            else -> 500
-        }
-        return (((min + avg) / 2) + penalty).toLong()
+    }
+
+    // ======================== 接口 & 枚举 ========================
+
+    /**
+     * 测速回调（所有回调均在主线程）
+     */
+    interface Callback {
+        /**
+         * 测速进度更新
+         *
+         * @param currentSpeedMbps 当前速度（Mbps），除以 8 即为 MB/s
+         * @param progress         进度（0-100）
+         */
+        fun onProgress(currentSpeedMbps: Double, progress: Int)
+
+        /**
+         * 测速成功
+         *
+         * @param speedMbps 最终速度（Mbps）
+         */
+        fun onResult(speedMbps: Double)
+
+        /**
+         * 测速失败
+         */
+        fun onError(error: Error)
+    }
+
+    /**
+     * 错误类型
+     */
+    enum class Error {
+        /** 测速失败（所有节点都不可达） */
+        FAILED,
+
+        /** 测速超时 */
+        TIMEOUT,
+
+        /** 用户取消 */
+        CANCELLED
+    }
+
+    // ======================== 内部类 ========================
+
+    private sealed class DownloadResult {
+        data class Success(val speedMbps: Double) : DownloadResult()
+        data class Error(val error: IOException) : DownloadResult()
+        object Timeout : DownloadResult()
     }
 }
