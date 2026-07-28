@@ -87,8 +87,8 @@ object NetLatencyTester {
 
             // 选出最快的可用源（排除失败）
             val best = results
-                    .filter { it.latency != Long.MAX_VALUE }
-                    .minByOrNull { it.latency }
+                .filter { it.latency != Long.MAX_VALUE }
+                .minByOrNull { it.latency }
 
             // 切回主线程返回结果（安全更新UI）
             withContext(Dispatchers.Main) {
