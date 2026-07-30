@@ -22,6 +22,7 @@ import java.io.IOException
 import java.net.ServerSocket
 import java.util.Locale
 import java.util.regex.Pattern
+import kotlin.system.exitProcess
 
 /**
  * Created by Jessi on 2024/10/31 10:49
@@ -181,6 +182,29 @@ object Functions {
         intent.component = componentName
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
         context.startActivity(intent)
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+
+    /**
+     * 重启APP
+     */
+    @JvmStatic
+    fun restartApp(context: Context, needKillProcess: Boolean): Boolean = try {
+        val pm = context.packageManager
+        val pkg = context.packageName
+        var launchIntent = pm.getLaunchIntentForPackage(pkg)
+        if (launchIntent == null) {
+            launchIntent = pm.getLeanbackLaunchIntentForPackage(pkg)
+        }
+        launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        context.startActivity(launchIntent)
+        if (needKillProcess) {
+            android.os.Process.killProcess(android.os.Process.myPid())
+            exitProcess(0)
+        }
         true
     } catch (e: Exception) {
         e.printStackTrace()
