@@ -66,6 +66,26 @@ object Time {
     fun currentTimeSeconds(): Long = System.currentTimeMillis() / 1000
 
     /**
+     * 扩展函数 将天数转换为毫秒（milliseconds）。
+     *
+     * 示例：
+     * - 1 → 86400000L
+     * - 2 → 172800000L
+     *
+     * 适用场景：
+     * - 时间间隔计算（如缓存有效期、过期时间等）
+     * @return 对应的毫秒值
+     */
+    @JvmStatic
+    val Int.day get() = this * 86_400_000L
+
+    @JvmStatic
+    val Long.day get() = this * 86_400_000L
+
+    @JvmStatic
+    val Double.day get() = (this * 86_400_000L).roundToLong()
+
+    /**
      * 扩展函数 将小时数转换为毫秒（milliseconds）。
      *
      * 示例：
@@ -81,6 +101,9 @@ object Time {
     val Int.hour get() = this * 3_600_000L
 
     @JvmStatic
+    val Long.hour get() = this * 3_600_000L
+
+    @JvmStatic
     val Double.hour get() = (this * 3_600_000L).roundToLong()
 
     /**
@@ -90,6 +113,9 @@ object Time {
     val Int.minute get() = this * 60_000L
 
     @JvmStatic
+    val Long.minute get() = this * 60_000L
+
+    @JvmStatic
     val Double.minute get() = (this * 60_000L).roundToLong()
 
     /**
@@ -97,6 +123,9 @@ object Time {
      */
     @JvmStatic
     val Int.second get() = this * 1_000L
+
+    @JvmStatic
+    val Long.second get() = this * 1_000L
 
     @JvmStatic
     val Double.second get() = (this * 1_000L).roundToLong()
@@ -152,7 +181,11 @@ object Time {
      */
     @JvmStatic
     @JvmOverloads
-    fun formatTimestamp(millisecond: Long, format: String = "yyyy-MM-dd HH:mm:ss", timeZoneId: String = TimeZone.getDefault().id): String {
+    fun formatTimestamp(
+        millisecond: Long,
+        format: String = "yyyy-MM-dd HH:mm:ss",
+        timeZoneId: String = TimeZone.getDefault().id
+    ): String {
         val sdf = SimpleDateFormat(format, Locale.getDefault())
         sdf.timeZone = TimeZone.getTimeZone(timeZoneId)
         return sdf.format(Date(millisecond))
