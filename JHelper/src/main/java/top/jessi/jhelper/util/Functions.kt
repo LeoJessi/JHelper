@@ -2,6 +2,7 @@ package top.jessi.jhelper.util
 
 import android.Manifest.permission
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.UiModeManager
 import android.content.ComponentName
 import android.content.Context
@@ -209,8 +210,17 @@ object Functions {
         false
     }
 
+    /**
+     * 关闭APP
+     * @param activity activity实例，用于关闭整个任务栈
+     */
     @JvmStatic
-    fun closeApp() {
+    @JvmOverloads
+    fun closeApp(activity: Activity? = null) {
+        activity?.apply {
+            finishAffinity()
+            finishAndRemoveTask()
+        }
         android.os.Process.killProcess(android.os.Process.myPid())
         exitProcess(0)
     }
