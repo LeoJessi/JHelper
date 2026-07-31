@@ -192,7 +192,8 @@ object Functions {
      * 重启APP
      */
     @JvmStatic
-    fun restartApp(context: Context, needKillProcess: Boolean): Boolean = try {
+    @JvmOverloads
+    fun restartApp(context: Context, needKillProcess: Boolean = true): Boolean = try {
         val pm = context.packageManager
         val pkg = context.packageName
         var launchIntent = pm.getLaunchIntentForPackage(pkg)
@@ -201,14 +202,17 @@ object Functions {
         }
         launchIntent?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launchIntent)
-        if (needKillProcess) {
-            android.os.Process.killProcess(android.os.Process.myPid())
-            exitProcess(0)
-        }
+        if (needKillProcess) closeApp()
         true
     } catch (e: Exception) {
         e.printStackTrace()
         false
+    }
+
+    @JvmStatic
+    fun closeApp() {
+        android.os.Process.killProcess(android.os.Process.myPid())
+        exitProcess(0)
     }
 
     /**
