@@ -42,7 +42,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 class NetSpeedMonitor @JvmOverloads constructor(
     private val callback: Callback,
-    private val mode: Mode = Mode.APP,
+    private val mode: Mode = Mode.DEVICE,
     private val intervalMs: Long = 1000L
 ) : AutoCloseable {
 
