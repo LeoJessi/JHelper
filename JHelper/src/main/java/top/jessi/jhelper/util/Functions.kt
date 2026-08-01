@@ -100,7 +100,7 @@ object Functions {
             unit = " G"
         }
         // 之所以不用Locale.getDefault()是因为有一些语言貌似没有 . 符号?  结果显示成了逗号,
-        return String.format(Locale.ENGLISH, "%.1f", fSize) + unit
+        return String.format(Locale.ENGLISH, "%.2f", fSize) + unit
     }
 
     /**
