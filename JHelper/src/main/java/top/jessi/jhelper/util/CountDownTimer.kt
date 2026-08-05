@@ -75,6 +75,7 @@ class CountDownTimer(private val totalSeconds: Int, private val callback: CountD
             if (currentRemaining <= 0) {
                 isRunning = false
                 try {
+                    callback.onTick(0, totalSeconds)
                     callback.onFinish()
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -94,6 +95,7 @@ class CountDownTimer(private val totalSeconds: Int, private val callback: CountD
     fun start() {
         if (isRunning || isPaused) return
         if (totalSeconds <= 0) {
+            callback.onTick(0, totalSeconds)
             callback.onFinish()
             return
         }
@@ -119,6 +121,7 @@ class CountDownTimer(private val totalSeconds: Int, private val callback: CountD
         if (!isPaused) return
         if (currentRemaining <= 0) {
             isPaused = false
+            callback.onTick(0, totalSeconds)
             callback.onFinish()
             return
         }
