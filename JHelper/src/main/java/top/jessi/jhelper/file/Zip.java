@@ -81,7 +81,7 @@ public class Zip {
     private static void zip(File srcFile, ZipOutputStream out, String path) {
         if (srcFile.isDirectory()) {
             File[] files = srcFile.listFiles();
-            if (files!= null) {
+            if (files != null) {
                 for (File file : files) {
                     zip(file, out, path + srcFile.getName() + "/");
                 }

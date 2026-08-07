@@ -2,6 +2,9 @@
 
 本仓库用于收集一些常用的Android工具类 - 2024.08.05
 
+#### 2026.08.07 - 1.9.0
+1. 增加基类IActivity、IFragment、IHandler
+
 #### 2026.08.05 - 1.8.21
 1. 新增一个定时器工具类IntervalTimer
 

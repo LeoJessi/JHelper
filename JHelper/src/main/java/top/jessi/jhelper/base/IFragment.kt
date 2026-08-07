@@ -8,9 +8,9 @@ import androidx.fragment.app.Fragment
  * Email：17324719944@189.cn
  * Describe：Fragment基类
  */
-open class BaseFragment : Fragment(), BaseHandler.MessageHandler {
+open class IFragment : Fragment(), IHandler.MessageHandler {
 
-    protected val mBaseHandler = BaseHandler(this)
+    protected val mIHandler = IHandler(this)
 
     override fun onHandleMessage(msg: Message) {
 
@@ -18,6 +18,6 @@ open class BaseFragment : Fragment(), BaseHandler.MessageHandler {
 
     override fun onDestroy() {
         super.onDestroy()
-        mBaseHandler.removeCallbacksAndMessages(null)
+        mIHandler.removeCallbacksAndMessages(null)
     }
 }
