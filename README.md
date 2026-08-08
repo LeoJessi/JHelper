@@ -2,6 +2,9 @@
 
 本仓库用于收集一些常用的Android工具类 - 2024.08.05
 
+#### 2026.08.08 - 1.9.1
+1. 优化IActivity调用
+
 #### 2026.08.07 - 1.9.0
 1. 增加基类IActivity、IFragment、IHandler
 

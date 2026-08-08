@@ -12,7 +12,10 @@ import androidx.appcompat.app.AppCompatActivity
  */
 open class IActivity : AppCompatActivity(), IHandler.MessageHandler {
 
+    @JvmField
     protected val mIHandler = IHandler(this)
+
+    @JvmField
     protected val me: Context = this
 
     override fun onCreate(savedInstanceState: Bundle?) {
