@@ -409,17 +409,12 @@ object Functions {
      * 判断当前横竖屏状态
      */
     @JvmStatic
-    fun isLandscape(context: Context): Boolean {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val bounds = wm.currentWindowMetrics.bounds
-            bounds.width() > bounds.height()
-        } else {
-            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-            val point = Point()
-            @Suppress("DEPRECATION")
-            wm.defaultDisplay.getRealSize(point)
-            point.x > point.y
-        }
+    fun isLandscape(context: Context?): Boolean {
+        if (context == null) return false
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as? WindowManager ?: return false
+        val point = Point()
+        @Suppress("DEPRECATION")
+        wm.defaultDisplay.getRealSize(point)
+        return point.x > point.y
     }
 }
