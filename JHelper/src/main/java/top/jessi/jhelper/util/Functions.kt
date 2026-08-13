@@ -11,6 +11,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.res.Configuration
+import android.graphics.Point
 import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -18,6 +19,7 @@ import android.os.Build
 import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
+import android.view.WindowManager
 import androidx.annotation.RequiresPermission
 import java.io.IOException
 import java.net.ServerSocket
@@ -403,4 +405,21 @@ object Functions {
         return appInfo.loadLabel(pm).toString()
     }
 
+    /**
+     * 判断当前横竖屏状态
+     */
+    @JvmStatic
+    fun isLandscape(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val bounds = wm.currentWindowMetrics.bounds
+            bounds.width() > bounds.height()
+        } else {
+            val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val point = Point()
+            @Suppress("DEPRECATION")
+            wm.defaultDisplay.getRealSize(point)
+            point.x > point.y
+        }
+    }
 }
