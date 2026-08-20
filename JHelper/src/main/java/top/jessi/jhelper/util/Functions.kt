@@ -313,6 +313,16 @@ object Functions {
     }
 
     /**
+     * 替换域名
+     */
+    @JvmStatic
+    fun replaceHost(sourceUrl: String, replaceHost: String): String {
+        val sourceHost = extractHost(sourceUrl)
+        if (TextUtils.isEmpty(sourceHost)) return sourceUrl
+        return sourceUrl.replace(sourceHost, replaceHost)
+    }
+
+    /**
      * 提取字符串中的数字
      */
     @JvmStatic

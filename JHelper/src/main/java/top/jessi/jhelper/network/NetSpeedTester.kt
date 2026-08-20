@@ -2,7 +2,6 @@ package top.jessi.jhelper.network
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -187,8 +186,6 @@ class NetSpeedTester {
                 break
             }
 
-            Log.d(TAG, "单线程测速 [$index/${urls.size - 1}]: $url")
-
             when (val result = tryDownload(url)) {
                 is DownloadResult.Success -> {
                     finalSpeedMbps = result.speedMbps
@@ -244,8 +241,6 @@ class NetSpeedTester {
                 resultError = Error.CANCELLED
                 break
             }
-
-            Log.d(TAG, "多线程测速 [$index/${urls.size - 1}]: $url, 线程数: $threadCount")
 
             // 重置多线程状态
             isMultiThreadCancelled = false
