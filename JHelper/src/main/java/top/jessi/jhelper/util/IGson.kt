@@ -3,6 +3,8 @@ package top.jessi.jhelper.util
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
+import java.io.File
+import java.io.InputStreamReader
 import java.io.Reader
 import java.lang.reflect.Type
 
@@ -29,6 +31,43 @@ object IGson {
     /** JSON → 对象（Reader + Type） */
     @JvmStatic
     fun <T> fromJson(reader: Reader, type: Type): T = gson.fromJson(reader, type)
+
+    /** JSON → 对象（File + Class） */
+    @JvmStatic
+    fun <T> fromJson(file: File, clazz: Class<T>): T =
+        InputStreamReader(file.inputStream(), Charsets.UTF_8).use { fromJson(it, clazz) }
+
+    /** JSON → 对象（File + Type） */
+    @JvmStatic
+    fun <T> fromJson(file: File, type: Type): T =
+        InputStreamReader(file.inputStream(), Charsets.UTF_8).use { fromJson(it, type) }
+
+    /** JSON → List<T>（File） */
+    @JvmStatic
+    fun <T> fromJsonToList(file: File, clazz: Class<T>): List<T> {
+        val type = TypeToken.getParameterized(List::class.java, clazz).type
+        return fromJson(file, type)
+    }
+
+    /** JSON → LinkedHashSet<T>（File） */
+    @JvmStatic
+    fun <T> fromJsonToSet(file: File, clazz: Class<T>): LinkedHashSet<T> {
+        val type = TypeToken.getParameterized(LinkedHashSet::class.java, clazz).type
+        return fromJson(file, type)
+    }
+
+    /** JSON → LinkedHashMap<K,V>（File） */
+    @JvmStatic
+    fun <K, V> fromJsonToMap(file: File, keyClass: Class<K>, valueClass: Class<V>): LinkedHashMap<K, V> {
+        val type = TypeToken.getParameterized(LinkedHashMap::class.java, keyClass, valueClass).type
+        return fromJson(file, type)
+    }
+
+    /** ✅ Kotlin专用: 支持复杂泛型推断（File） */
+    inline fun <reified T> fromJson(file: File): T {
+        val type = object : TypeToken<T>() {}.type
+        return fromJson(file, type)
+    }
 
     /** JSON → List<T> */
     @JvmStatic
