@@ -40,6 +40,17 @@ object Files {
     /**
      * 判断文件是否存在
      *
+     * @param file 文件
+     * @return true表示文件存在，false表示文件不存在
+     */
+    @JvmStatic
+    fun isExists(file: File): Boolean {
+        return file.exists()
+    }
+
+    /**
+     * 判断文件是否存在
+     *
      * @param path 文件路径
      * @return true表示文件存在，false表示文件不存在
      */
@@ -79,6 +90,17 @@ object Files {
     /**
      * 获取文件大小
      *
+     * @param file 文件
+     * @return 文件大小（单位：字节）
+     */
+    @JvmStatic
+    fun getSize(file: File): Long {
+        return if (file.exists()) file.length() else 0
+    }
+
+    /**
+     * 获取文件大小
+     *
      * @param path 文件路径
      * @return 文件大小（单位：字节）
      */
@@ -87,6 +109,19 @@ object Files {
         if (TextUtils.isEmpty(path)) return 0
         val file = File(path)
         return if (file.exists()) file.length() else 0
+    }
+
+    /**
+     * 创建目录
+     *
+     * @param dir 目录
+     * @return true：创建成功 false：创建失败
+     */
+    @JvmStatic
+    fun createDir(dir: File): Boolean {
+        var isSuccess = false
+        if (!dir.exists()) isSuccess = dir.mkdirs()
+        return isSuccess
     }
 
     /**
@@ -101,6 +136,30 @@ object Files {
         val file = File(dirPath)
         if (!file.exists()) isSuccess = file.mkdirs()
         return isSuccess
+    }
+
+    /**
+     * 创建文件
+     *
+     * @param file 文件
+     * @return true：创建成功 false：创建失败
+     */
+    @JvmStatic
+    fun create(file: File): Boolean {
+        if (file.exists()) return false
+        try {
+            val parentFile = file.parentFile
+            if (parentFile != null && !parentFile.exists()) {
+                if (!parentFile.mkdirs()) {
+                    Log.w("Files", "create parent dir failed: ${parentFile.absolutePath}")
+                    return false
+                }
+            }
+            return file.createNewFile()
+        } catch (e: IOException) {
+            Log.w("Files", "create file failed: ${file.absolutePath}", e)
+            return false
+        }
     }
 
     /**
@@ -145,6 +204,18 @@ object Files {
     /**
      * 复制文件
      *
+     * @param sourceFile 资源文件
+     * @param targetFile 目标文件
+     * @return 是否复制成功
+     */
+    @JvmStatic
+    fun copyFile(sourceFile: File, targetFile: File): Boolean {
+        return copyFile(sourceFile.absolutePath, targetFile.absolutePath)
+    }
+
+    /**
+     * 复制文件
+     *
      * @param sourceFilePath 资源文件路径
      * @param targetFilePath 目标文件路径
      * @return 是否复制成功
@@ -175,6 +246,18 @@ object Files {
     /**
      * 移动文件（支持跨分区移动）
      *
+     * @param sourceFile 资源文件
+     * @param targetFile 目标文件
+     * @return 是否移动成功
+     */
+    @JvmStatic
+    fun moveFile(sourceFile: File, targetFile: File): Boolean {
+        return moveFile(sourceFile.absolutePath, targetFile.absolutePath)
+    }
+
+    /**
+     * 移动文件（支持跨分区移动）
+     *
      * @param sourceFilePath 资源文件路径
      * @param targetFilePath 目标文件路径
      * @return 是否移动成功
@@ -197,6 +280,17 @@ object Files {
             Log.w("Files", "move file failed: $sourceFilePath -> $targetFilePath", e)
             return false
         }
+    }
+
+    /**
+     * 删除文件或目录（迭代方式，避免深层嵌套导致栈溢出）
+     *
+     * @param file 文件或目录
+     * @return true：删除成功 false：删除失败
+     */
+    @JvmStatic
+    fun delete(file: File): Boolean {
+        return delete(file.absolutePath)
     }
 
     /**
@@ -240,6 +334,27 @@ object Files {
     /**
      * 读取文件内容
      *
+     * @param file 文件
+     * @return 文件内容
+     */
+    @JvmStatic
+    fun read(file: File): String {
+        if (!file.exists() || file.length() <= 0) return ""
+        try {
+            FileInputStream(file).use { inputStream ->
+                BufferedReader(InputStreamReader(inputStream)).use { reader ->
+                    return reader.lineSequence().joinToString("\n")
+                }
+            }
+        } catch (e: IOException) {
+            Log.w(TAG, "read file failed: ${file.absolutePath}", e)
+            return ""
+        }
+    }
+
+    /**
+     * 读取文件内容
+     *
      * @param filePath 文件路径
      * @return 文件内容
      */
@@ -257,6 +372,18 @@ object Files {
             Log.w(TAG, "read file failed: $filePath", e)
             return ""
         }
+    }
+
+    /**
+     * 将字符串写入指定文件（使用 UTF-8 编码）
+     *
+     * @param file   文件
+     * @param content 内容
+     * @param append  是否追加
+     */
+    @JvmStatic
+    fun write(file: File, content: String, append: Boolean): Boolean {
+        return write(file.absolutePath, content, append)
     }
 
     /**
