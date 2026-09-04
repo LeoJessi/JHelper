@@ -427,4 +427,46 @@ object Functions {
         wm.defaultDisplay.getRealSize(point)
         return point.x > point.y
     }
+
+    /**
+     * 根据包名获取版本号
+     *
+     * @param context     上下文
+     * @param packageName 包名，默认为当前应用
+     * @return 版本号，获取失败返回-1
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun getVersionCode(context: Context, packageName: String = context.packageName): Long {
+        return try {
+            val pm = context.packageManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pm.getPackageInfo(packageName, 0).longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(packageName, 0).versionCode.toLong()
+            }
+        } catch (_: Exception) {
+            -1L
+        }
+    }
+
+    /**
+     * 根据包名获取版本名
+     *
+     * @param context     上下文
+     * @param packageName 包名，默认为当前应用
+     * @return 版本名，获取失败返回null
+     */
+    @JvmStatic
+    @JvmOverloads
+    fun getVersionName(context: Context, packageName: String = context.packageName): String {
+        return try {
+            val pm = context.packageManager
+            pm.getPackageInfo(packageName, 0).versionName
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
 }
