@@ -523,7 +523,8 @@ object Files {
      */
     @JvmStatic
     fun getM3UList(context: Context, pageSize: Int, curPage: Int): MutableList<File> {
-        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT $pageSize OFFSET ${pageSize * curPage}"
+        val sortOrder =
+            "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT $pageSize OFFSET ${pageSize * curPage}"
         return queryMediaFiles(
             context, M3U_URI, M3U_PROJECTION, M3U_SELECTION, M3U_SELECTION_ARGS,
             sortOrder, MediaStore.Files.FileColumns.DATA
@@ -635,6 +636,5 @@ object Files {
         }
         return true
     }
-
 
 }

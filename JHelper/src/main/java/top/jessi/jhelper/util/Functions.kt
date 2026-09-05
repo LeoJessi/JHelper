@@ -469,4 +469,10 @@ object Functions {
         }
     }
 
+    /**
+     * 检查intent是否可以打开
+     */
+    @JvmStatic
+    fun isIntentAvailable(context: Context, intent: Intent) = (intent.resolveActivity(context.packageManager) != null)
+
 }
