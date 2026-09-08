@@ -256,6 +256,20 @@ object Functions {
     }
 
     /**
+     * 打开系统蓝牙设置
+     */
+    @JvmStatic
+    fun openBluetoothSettings(context: Context) = try {
+        val intent = Intent(Settings.ACTION_BLUETOOTH_SETTINGS)
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+        context.startActivity(intent)
+        true
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+
+    /**
      * 判断字符串是否是数字
      * @param str   要判断的字符串
      */
