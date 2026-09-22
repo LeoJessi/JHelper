@@ -489,4 +489,34 @@ object Functions {
     @JvmStatic
     fun isIntentAvailable(context: Context, intent: Intent) = (intent.resolveActivity(context.packageManager) != null)
 
+    /**
+     * 判断字符串是否为合法的邮箱地址
+     *
+     * 使用 Android 内置的 [android.util.Patterns.EMAIL_ADDRESS] 进行匹配，
+     * 能够覆盖绝大多数常见邮箱格式（如 user@example.com、user.name+tag@domain.co.uk 等）。
+     *
+     * @param email 待校验的字符串，可为 null
+     * @return 如果字符串非空且符合邮箱格式则返回 true，否则返回 false
+     *
+     * 使用示例：
+     * ```kotlin
+     * // 基本用法
+     * if (FunctionUtils.isValidEmail(input)) {
+     *     // 邮箱格式正确
+     * } else {
+     *     // 邮箱格式错误
+     * }
+     *
+     * // 安全处理可空字符串
+     * val email: String? = userInput.text?.toString()
+     * if (FunctionUtils.isValidEmail(email)) {
+     *     proceedWithEmail(email!!)
+     * }
+     * ```
+     */
+    @JvmStatic
+    fun isValidEmail(email: String?): Boolean {
+        return !email.isNullOrBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
+
 }
