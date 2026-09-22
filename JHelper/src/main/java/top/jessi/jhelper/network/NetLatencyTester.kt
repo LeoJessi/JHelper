@@ -6,7 +6,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import top.jessi.jhelper.time.Time
 import top.jessi.jhelper.time.Time.diffNow
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -117,7 +116,7 @@ object NetLatencyTester {
         /* 测速3次 抗抖动 更接近真实链路质量 */
         repeat(testCount) {
             val cost = try {
-                val start = Time.currentTimeMillis()
+                val start = System.currentTimeMillis()
                 Socket().use { socket ->
                     socket.connect(InetSocketAddress(host, port), CONNECT_TIMEOUT)
                     // 向服务器发送极小数据包 触发真实通信路径（CDN / NAT / 代理） 避免“只connect但不通信”的假成功连接

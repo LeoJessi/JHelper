@@ -55,15 +55,67 @@ import kotlin.math.roundToLong
  * #################################时间格式化 END########################################
  */
 object Time {
-
-
-    /** 当前时间戳（毫秒） */
+    /**
+     * 当前时间戳（毫秒）- 从网络校准后的时间
+     *
+     * 说明：
+     * - 首次调用会自动异步同步网络时间
+     * - 同步完成前返回系统时间
+     * - 同步完成后返回校准后的准确时间
+     *
+     * 使用场景：
+     * - HTTPS 请求需要准确时间戳验证
+     * - 系统时间不准确的设备
+     * - 需要全球统一时间的业务逻辑
+     *
+     * @return 网络校准后的时间戳（毫秒）
+     */
     @JvmStatic
-    fun currentTimeMillis(): Long = System.currentTimeMillis()
+    fun currentTimeMillis(): Long {
+        return FetchRealTime.getInstance().getRealTimeMillis()
+    }
 
-    /** 当前时间戳（秒） */
+    /**
+     * 当前时间戳（秒）- 从网络校准后的时间
+     *
+     * @return 网络校准后的时间戳（秒）
+     */
     @JvmStatic
-    fun currentTimeSeconds(): Long = System.currentTimeMillis() / 1000
+    fun currentTimeSeconds(): Long {
+        return FetchRealTime.getInstance().getRealTimeMillis() / 1000
+    }
+
+    /**
+     * 获取当前时间偏移量（网络时间 - 系统时间）
+     *
+     * @return 偏移量（毫秒），未同步时返回 0
+     */
+    @JvmStatic
+    fun currentTimeOffset(): Long {
+        return FetchRealTime.getInstance().getOffset()
+    }
+
+    /**
+     * 同步网络时间（异步执行）
+     *
+     * @param callback 同步完成回调，参数：(success: Boolean, offset: Long)
+     *                 - success: 是否同步成功
+     *                 - offset: 时间偏移量（网络时间 - 系统时间），单位毫秒
+     */
+    @JvmStatic
+    fun syncTime(callback: ((Boolean, Long) -> Unit)? = null) {
+        FetchRealTime.getInstance().syncTime(callback)
+    }
+
+    /**
+     * 检查网络时间是否已同步
+     *
+     * @return 是否已同步
+     */
+    @JvmStatic
+    fun isTimeSynced(): Boolean {
+        return FetchRealTime.getInstance().isSynced()
+    }
 
     /**
      * 扩展函数 将天数转换为毫秒（milliseconds）。
