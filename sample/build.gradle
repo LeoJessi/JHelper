@@ -30,14 +30,14 @@ android {
         buildConfig = true
     }
 
-    // 引入本地 ILog 项目的 ILog 源码，便于直接调试
-    // 对应原 JitPack 依赖：implementation 'com.github.LeoJessi.ILog:ILog:1.236.8'
-    sourceSets {
-        main {
-            java.srcDirs += 'D:/Android/AndroidProjects/jessi/ILog/ILog'
-//            java.srcDirs += 'D:/Android/AndroidProjects/jessi/ILog/ILog/src/main/java'
-        }
-    }
+//    // 引入本地 ILog 项目的 ILog 源码，便于直接调试
+//    // 对应原 JitPack 依赖：implementation 'com.github.LeoJessi.ILog:ILog:1.236.8'
+//    sourceSets {
+//        main {
+//            java.srcDirs += 'D:/Android/AndroidProjects/jessi/ILog/ILog'
+////            java.srcDirs += 'D:/Android/AndroidProjects/jessi/ILog/ILog/src/main/java'
+//        }
+//    }
 }
 
 
