@@ -20,6 +20,7 @@ import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.WindowManager
+import android.webkit.WebSettings
 import androidx.annotation.RequiresPermission
 import java.io.IOException
 import java.net.ServerSocket
@@ -369,7 +370,8 @@ object Functions {
      * 判断是否是系统应用
      */
     @JvmStatic
-    fun isSystemApp(context: Context, packageName: String): Boolean {
+    @JvmOverloads
+    fun isSystemApp(context: Context, packageName: String = context.packageName): Boolean {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
         return (appInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0) ||
@@ -380,7 +382,8 @@ object Functions {
      * 获取应用banner
      */
     @JvmStatic
-    fun loadAppBanner(context: Context, packageName: String): Drawable? {
+    @JvmOverloads
+    fun loadAppBanner(context: Context, packageName: String = context.packageName): Drawable? {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
         return appInfo.loadBanner(pm)
@@ -390,7 +393,8 @@ object Functions {
      * 获取应用Icon
      */
     @JvmStatic
-    fun loadAppIcon(context: Context, packageName: String): Drawable? {
+    @JvmOverloads
+    fun loadAppIcon(context: Context, packageName: String = context.packageName): Drawable? {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
         return appInfo.loadIcon(pm)
@@ -404,8 +408,9 @@ object Functions {
      * @return Drawable? 如果未设置 roundIcon 或 API < 25 则返回 null
      */
     @JvmStatic
+    @JvmOverloads
     @SuppressLint("PrivateApi")
-    fun loadAppRoundIcon(context: Context, packageName: String): Drawable? {
+    fun loadAppRoundIcon(context: Context, packageName: String = context.packageName): Drawable? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return null
         val pm = context.packageManager
         return try {
@@ -423,7 +428,8 @@ object Functions {
      * 获取应用Label
      */
     @JvmStatic
-    fun loadAppLabel(context: Context, packageName: String): String {
+    @JvmOverloads
+    fun loadAppLabel(context: Context, packageName: String = context.packageName): String {
         val pm = context.packageManager
         val appInfo = pm.getApplicationInfo(packageName, 0)
         return appInfo.loadLabel(pm).toString()
@@ -517,6 +523,49 @@ object Functions {
     @JvmStatic
     fun isValidEmail(email: String?): Boolean {
         return !email.isNullOrBlank() && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+    }
+
+    /**
+     * 获取设备 UserAgent
+     * 对返回的数据进行过滤，非 ASCII 字符（控制字符、中文等）转为 \\uXXXX 格式
+     *
+     * @param context 上下文
+     * @return UserAgent 字符串，获取失败返回空字符串
+     */
+    @JvmStatic
+    fun getUserAgent(context: Context): String {
+        val userAgent = try {
+            WebSettings.getDefaultUserAgent(context)
+        } catch (_: Exception) {
+            System.getProperty("http.agent")
+        } ?: return ""
+        val sb = StringBuilder()
+        for (c in userAgent) {
+            if (c !in '\u0020' until '\u007f') {
+                sb.append(String.format("\\u%04x", c.code))
+            } else {
+                sb.append(c)
+            }
+        }
+        return sb.toString()
+    }
+
+    /**
+     * 判断设备是否已完成设置向导
+     *
+     * @param context 上下文
+     * @return true 表示设备已完成设置向导
+     */
+    @JvmStatic
+    fun isUserSetupComplete(context: Context): Boolean {
+        return try {
+            val userSetupComplete = Settings.Secure.getInt(context.contentResolver, "user_setup_complete", 0)
+            val deviceProvisioned =
+                Settings.Global.getInt(context.contentResolver, Settings.Global.DEVICE_PROVISIONED, 0)
+            userSetupComplete != 0 && deviceProvisioned != 0
+        } catch (_: Exception) {
+            false
+        }
     }
 
 }
