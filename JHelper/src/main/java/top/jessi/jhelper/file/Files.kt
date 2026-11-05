@@ -170,21 +170,19 @@ object Files {
      */
     @JvmStatic
     fun create(filePath: String): Boolean {
-        val file = File(filePath)
-        if (file.exists()) return false
-        try {
-            val parentFile = file.parentFile
-            if (parentFile != null && !parentFile.exists()) {
-                if (!parentFile.mkdirs()) {
-                    Log.w("Files", "create parent dir failed: ${parentFile.absolutePath}")
-                    return false
-                }
-            }
-            return file.createNewFile()
-        } catch (e: IOException) {
-            Log.w("Files", "create file failed: $filePath", e)
-            return false
-        }
+        return create(File(filePath))
+    }
+
+    /**
+     * 创建文件
+     *
+     * @param fileDir 文件目录
+     * @param fileName 文件名
+     * @return true：创建成功 false：创建失败
+     */
+    @JvmStatic
+    fun create(fileDir: String, fileName: String): Boolean {
+        return create(File(fileDir, fileName))
     }
 
     /**
@@ -585,7 +583,8 @@ object Files {
      * @return 摘要字符串（小写），失败时返回空字符串
      */
     @JvmStatic
-    fun getFileDigest(file: File, algorithm: String): String {
+    @JvmOverloads
+    fun getFileDigest(file: File, algorithm: String = "MD5"): String {
         if (!file.exists() || file.isDirectory) return ""
         try {
             val digest = MessageDigest.getInstance(algorithm)
